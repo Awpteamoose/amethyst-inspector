@@ -60,8 +60,6 @@ impl<'s> System<'s> for InspectorHierarchy {
 						render_boy(entity, &hierarchy, &names, &ui, &mut inspector_state);
 					}
 				});
-
-			ui.show_demo_window(&mut true);
 		});
 	}
 }
