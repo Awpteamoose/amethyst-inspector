@@ -25,3 +25,5 @@ inspector![
 	Transform,
 ];
 ```
+
+![screenshot](https://raw.githubusercontent.com/awpteamoose/amethyst-inspector/master/screenshot.png)
