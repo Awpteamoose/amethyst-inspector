@@ -1,0 +1,27 @@
+## About:
+Unity-inspired entity hierarchy and component editor.
+
+## Usage:
+1. Implement `Inspect` for all components that you want to show up in the inspector
+```rust
+impl Inspect for Transform {
+	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>) {
+		let mut v: [f32; 2] = self.translation().xy().into();
+		ui.drag_float2(imgui::im_str!("##transform{}{}", entity.id(), entity.gen().id()), &mut v).build();
+		self.set_translation_x(v[0]);
+		self.set_translation_y(v[1]);
+	}
+}
+```
+2. List all components you want to show up in the inspector in the `inspector!` macro. This creates a system called `Inspector`.
+```rust
+inspector![
+	Named,
+	Transform,
+];
+```
+3. Add `InspectorHierarchy` and `Inspector` to your systems
+```rust
+	.with(InspectorHierarchy, "inspector_hierarchy", &[])
+	.with(Inspector, "inspector", &["inspector_hierarchy"])
+```
