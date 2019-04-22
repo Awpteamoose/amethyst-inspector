@@ -1,7 +1,5 @@
 use amethyst::{
-	core::{frame_limiter, transform::{self, Transform}, Named},
-	prelude::*,
-	renderer::{DisplayConfig, DrawFlat2D, Pipeline, RenderBundle, Stage},
+	core::{transform::Transform, Named},
 	ecs::prelude::*,
 };
 use amethyst_imgui::imgui;
