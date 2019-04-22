@@ -68,6 +68,7 @@ pub trait Inspect {
 	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>);
 }
 
+#[cfg(feature = "named")]
 impl Inspect for Named {
 	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>) {
 		let mut buf = imgui::ImString::new(self.name.clone());
@@ -76,12 +77,29 @@ impl Inspect for Named {
 	}
 }
 
+#[cfg(feature = "transform")]
 impl Inspect for Transform {
 	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>) {
-		let mut v: [f32; 2] = self.translation().xy().into();
-		ui.drag_float2(imgui::im_str!("##transform{}{}", entity.id(), entity.gen().id()), &mut v).build();
-		self.set_translation_x(v[0]);
-		self.set_translation_y(v[1]);
+		{
+			let translation = self.translation();
+			let mut v: [f32; 3] = [translation[0], translation[1], translation[2]];
+			ui.drag_float3(imgui::im_str!("translation##transform{}{}", entity.id(), entity.gen().id()), &mut v).speed(0.1).build();
+			self.set_translation(v.into());
+		}
+
+		{
+			let mut rotation = self.rotation().euler_angles().2.to_degrees();
+			if rotation == -180. { rotation = 180.; }
+			ui.drag_float(imgui::im_str!("rotation##transform{}{}", entity.id(), entity.gen().id()), &mut rotation).speed(0.25).build();
+			self.set_rotation_2d(rotation.to_radians());
+		}
+
+		{
+			let scale = self.scale().xy();
+			let mut v: [f32; 2] = [scale[0], scale[1]];
+			ui.drag_float2(imgui::im_str!("scale##transform{}{}", entity.id(), entity.gen().id()), &mut v).speed(0.1).build();
+			self.set_scale(v[0], v[1], 1.);
+		}
 	}
 }
 
