@@ -2,12 +2,7 @@
 Unity-inspired entity hierarchy and component editor via [amethyst-imgui](https://github.com/Awpteamoose/amethyst-imgui)
 
 ## Usage:
-1. Add `InspectorHierarchy` and `Inspector` to your systems
-```rust
-	.with(InspectorHierarchy, "inspector_hierarchy", &[])
-	.with(Inspector, "inspector", &["inspector_hierarchy"])
-```
-2. Implement `Inspect` for all components that you want to show up in the inspector. For example:
+1. Implement `Inspect` for all components that you want to show up in the inspector. For example:
 ```rust
 impl Inspect for Transform {
 	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>) {
@@ -18,12 +13,17 @@ impl Inspect for Transform {
 	}
 }
 ```
-3. List all components you want to show up in the inspector in the `inspector!` macro. This creates a system called `Inspector`.
+2. List all components you want to show up in the inspector in the `inspector!` macro. This creates a system called `Inspector`.
 ```rust
 inspector![
 	Named,
 	Transform,
 ];
+```
+3. Add `InspectorHierarchy` and `Inspector` to your systems
+```rust
+	.with(InspectorHierarchy, "inspector_hierarchy", &[])
+	.with(Inspector, "inspector", &["inspector_hierarchy"])
 ```
 
 ![screenshot](https://raw.githubusercontent.com/awpteamoose/amethyst-inspector/master/screenshot.png)
