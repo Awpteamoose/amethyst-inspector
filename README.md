@@ -44,7 +44,7 @@ inspector![
 ```
 3. Add `InspectorHierarchy` and `Inspector` to your systems
 ```rust
-	.with(InspectorHierarchy, "inspector_hierarchy", &[])
+	.with(InspectorHierarchy::<UserData>::default(), "inspector_hierarchy", &[])
 	.with(Inspector, "inspector", &["inspector_hierarchy"])
 ```
 
