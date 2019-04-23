@@ -2,7 +2,7 @@ use amethyst::{
 	core::{transform::Transform, Named},
 	ecs::prelude::*,
 };
-use amethyst_imgui::imgui;
+pub use amethyst_imgui::imgui;
 pub use paste;
 use std::any::Any;
 
@@ -191,7 +191,7 @@ macro_rules! inspector {
 		pub struct Inspector;
 		impl<'s> System<'s> for Inspector {
 			type SystemData = (
-				Write<'s, InspectorState<$user_data>>,
+				Write<'s, $crate::InspectorState<$user_data>>,
 				$(WriteStorage<'s, $cmp>,)+
 			);
 
@@ -199,6 +199,8 @@ macro_rules! inspector {
 				#[allow(non_snake_case)]
 				fn run(&mut self, (mut inspector_state, $(mut [<hello $cmp>],)+): Self::SystemData) {
 					amethyst_imgui::with(move |ui| {
+						use $crate::imgui;
+						use $crate::Inspect;
 						ui.window(imgui::im_str!("Inspector"))
 							.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 							.build(move || {

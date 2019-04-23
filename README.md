@@ -33,6 +33,7 @@ impl<'a> Inspect<'a> for Transform {
 ```
 2. List your `UserData` and all components you want to show up in the inspector with an `inspector!` macro. This creates a system called `Inspector`. For example:
 ```rust
+#[derive(Default)]
 pub struct UserData;
 
 inspector![
