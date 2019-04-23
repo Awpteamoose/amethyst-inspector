@@ -1,6 +1,7 @@
 use amethyst::{
 	core::{transform::Transform, Named},
 	ecs::prelude::*,
+	renderer::{Hidden, HiddenPropagate, Blink}
 };
 pub use amethyst_imgui::imgui;
 pub use paste;
@@ -50,7 +51,7 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 						.build(|| {
 							opened = true;
 							ui.same_line(0.);
-							if ui.small_button(imgui::im_str!("inspect##selector{}{}", entity.id(), entity.gen().id())) {
+							if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
 								inspector_state.selected = Some(entity);
 							}
 							for child in children {
@@ -60,7 +61,7 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 
 					if !opened {
 						ui.same_line(0.);
-						if ui.small_button(imgui::im_str!("inspect##selector{}{}", entity.id(), entity.gen().id())) {
+						if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
 							inspector_state.selected = Some(entity);
 						}
 					}
@@ -74,60 +75,76 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 	}
 }
 
-pub trait Inspect<'a> {
+pub trait Inspect<'a>: Component {
 	type UserData;
-	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData);
+	const can_add: bool = false;
+	const can_remove: bool = true;
+
+	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {}
+	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {}
+	fn setup(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {}
 }
 
 impl<'a> Inspect<'a> for Named {
 	type UserData = &'a mut dyn Any;
+	const can_add: bool = true;
 
-	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
-		let mut buf = imgui::ImString::new(self.name.clone());
-		ui.input_text(imgui::im_str!("name##named{}{}", entity.id(), entity.gen().id()), &mut buf)
+	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
+		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+		let mut buf = imgui::ImString::new(me.name.clone());
+		ui.input_text(imgui::im_str!("Entity {}/{}##named", entity.id(), entity.gen().id()), &mut buf)
 			.resize_buffer(true)
 			.build();
-		self.name = std::borrow::Cow::from(String::from(buf.to_str()));
-		ui.separator();
+		me.name = std::borrow::Cow::from(String::from(buf.to_str()));
+	}
+
+	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+		storage.insert(entity, Named::new(format!("Entity {}/{}", entity.id(), entity.gen().id()))).unwrap();
 	}
 }
 
 impl<'a> Inspect<'a> for Transform {
 	type UserData = &'a mut dyn Any;
+	const can_add: bool = true;
 
-	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
+	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
+		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+
 		{
-			let translation = self.translation();
+			let translation = me.translation();
 			let mut v: [f32; 3] = [translation[0], translation[1], translation[2]];
-			ui.drag_float3(imgui::im_str!("translation##transform{}{}", entity.id(), entity.gen().id()), &mut v)
+			ui.drag_float3(imgui::im_str!("translation##transform{:?}", entity), &mut v)
 				.speed(0.1)
 				.build();
-			self.set_translation(v.into());
+			me.set_translation(v.into());
 		}
 
 		{
-			let mut rotation = self.rotation().euler_angles().2.to_degrees();
+			let mut rotation = me.rotation().euler_angles().2.to_degrees();
 			if rotation == -180. {
 				rotation = 180.;
 			}
 			ui.drag_float(
-				imgui::im_str!("rotation##transform{}{}", entity.id(), entity.gen().id()),
+				imgui::im_str!("rotation##transform{:?}", entity),
 				&mut rotation,
 			)
 			.speed(0.25)
 			.build();
-			self.set_rotation_2d(rotation.to_radians());
+			me.set_rotation_2d(rotation.to_radians());
 		}
 
 		{
-			let scale = self.scale().xy();
+			let scale = me.scale().xy();
 			let mut v: [f32; 2] = [scale[0], scale[1]];
-			ui.drag_float2(imgui::im_str!("scale##transform{}{}", entity.id(), entity.gen().id()), &mut v)
+			ui.drag_float2(imgui::im_str!("scale##transform{:?}", entity), &mut v)
 				.speed(0.1)
 				.build();
-			self.set_scale(v[0], v[1], 1.);
+			me.set_scale(v[0], v[1], 1.);
 		}
-		ui.separator();
+	}
+
+	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+		storage.insert(entity, Transform::default());
 	}
 }
 
@@ -146,42 +163,87 @@ impl Component for SpriteInfo {
 impl<'a> Inspect<'a> for SpriteInfo {
 	type UserData = &'a mut dyn MaxSprites;
 
-	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {
-		user_data.set_max_sprites(self.0 as i32);
+	fn setup(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+		let me = if let Some(x) = storage.get(entity) { x } else { return; };
+		user_data.set_max_sprites(me.0 as i32);
 	}
 }
 
 impl<'a> Inspect<'a> for amethyst::renderer::SpriteRender {
 	type UserData = &'a mut dyn MaxSprites;
 
-	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {
-		let mut sprite_number = self.sprite_number as i32;
+	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {
+		let mut me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+
+		let mut sprite_number = me.sprite_number as i32;
 		ui.slider_int(
-			imgui::im_str!("# sprite##sprite_render{}{}", entity.id(), entity.gen().id()),
+			imgui::im_str!("# sprite##sprite_render{:?}", entity),
 			&mut sprite_number,
 			0,
 			user_data.max_sprites(),
 		)
 		.build();
-		self.sprite_number = sprite_number as usize;
-		ui.separator();
+		me.sprite_number = sprite_number as usize;
 	}
 }
 
 impl<'a> Inspect<'a> for amethyst::renderer::Rgba {
 	type UserData = &'a mut Any;
+	const can_add: bool = true;
 
-	fn inspect(&mut self, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {
+	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
 		use amethyst::renderer::Rgba;
 
-		let mut v: [f32; 4] = [self.0, self.1, self.2, self.3];
-		ui.drag_float4(imgui::im_str!("colour tint##rgba{}{}", entity.id(), entity.gen().id()), &mut v)
+		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+
+		let mut v: [f32; 4] = [me.0, me.1, me.2, me.3];
+		ui.drag_float4(imgui::im_str!("colour tint##rgba{:?}", entity), &mut v)
 			.speed(0.1)
 			.build();
-		std::mem::replace(self, v.into());
-		ui.separator();
+		std::mem::replace(me, v.into());
+	}
+
+	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+		storage.insert(entity, amethyst::renderer::Rgba::white()).unwrap();
 	}
 }
+
+impl<'a> Inspect<'a> for amethyst::renderer::Blink {
+	type UserData = &'a mut Any;
+	const can_add: bool = true;
+
+	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
+		use amethyst::renderer::Rgba;
+
+		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+		ui.drag_float(
+			imgui::im_str!("delay##blink{:?}", entity),
+			&mut me.delay,
+		).speed(0.1).build();
+		ui.checkbox(imgui::im_str!("absolute time##blink{:?}", entity), &mut me.absolute_time);
+	}
+
+	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+		storage.insert(entity, Blink { delay: 0.5, timer: 0., absolute_time: false }).unwrap();
+	}
+}
+
+#[macro_export]
+macro_rules! inspect_marker {
+	($cmp: ident) => {
+		impl<'a> Inspect<'a> for $cmp {
+			type UserData = &'a mut dyn std::any::Any;
+			const can_add: bool = true;
+
+			fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+				storage.insert(entity, $cmp).unwrap();
+			}
+		}
+	};
+}
+
+inspect_marker!(Hidden);
+inspect_marker!(HiddenPropagate);
 
 #[macro_export]
 macro_rules! inspector {
@@ -205,9 +267,41 @@ macro_rules! inspector {
 							.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 							.build(move || {
 								let entity = if let Some(x) = inspector_state.selected { x } else { return; };
+								$($cmp::setup(&mut [<hello $cmp>], entity, &mut inspector_state.user_data);)+
+
+								if ui.collapsing_header(imgui::im_str!("add component")).build() {
+									let mut hor_pos = 0.;
+									$(
+										if $cmp::can_add && ![<hello $cmp>].contains(entity) {
+											if ui.small_button(imgui::im_str!("{}", stringify!($cmp))) {
+												$cmp::add(&mut [<hello $cmp>], entity, &mut inspector_state.user_data);
+											}
+											hor_pos += ui.get_item_rect_size().0 + ui.imgui().style().item_spacing.x;
+											if hor_pos < ui.get_content_region_avail().0 {
+												ui.same_line(0.);
+											} else {
+												hor_pos = 0.;
+											}
+										}
+									)+
+									if hor_pos > 0. {
+										ui.new_line();
+									}
+								}
+
 								$(
-									if let Some(cmp) = [<hello $cmp>].get_mut(entity) {
-										cmp.inspect(entity, ui, &mut inspector_state.user_data);
+									if [<hello $cmp>].contains(entity) {
+
+										let expanded = ui.collapsing_header(imgui::im_str!("{}##header", stringify!($cmp))).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
+										if $cmp::can_remove {
+											ui.same_line(0.);
+											if ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp))) {
+												[<hello $cmp>].remove(entity);
+											}
+										}
+										if expanded {
+											$cmp::inspect(&mut [<hello $cmp>], entity, ui, &mut inspector_state.user_data);
+										}
 									}
 								)+
 							});
