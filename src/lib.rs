@@ -50,7 +50,7 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 						.build(|| {
 							opened = true;
 							ui.same_line(0.);
-							if ui.small_button(imgui::im_str!("inspect##{:?}_selector", &label)) {
+							if ui.small_button(imgui::im_str!("inspect##selector{}{}", entity.id(), entity.gen().id())) {
 								inspector_state.selected = Some(entity);
 							}
 							for child in children {
@@ -60,7 +60,7 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 
 					if !opened {
 						ui.same_line(0.);
-						if ui.small_button(imgui::im_str!("inspect##{:?}_selector", &label)) {
+						if ui.small_button(imgui::im_str!("inspect##selector{}{}", entity.id(), entity.gen().id())) {
 							inspector_state.selected = Some(entity);
 						}
 					}
