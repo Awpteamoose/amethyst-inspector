@@ -77,8 +77,8 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 
 pub trait Inspect<'a>: Component {
 	type UserData;
-	const can_add: bool = false;
-	const can_remove: bool = true;
+	const CAN_ADD: bool = false;
+	const CAN_REMOVE: bool = true;
 
 	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {}
 	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {}
@@ -87,7 +87,7 @@ pub trait Inspect<'a>: Component {
 
 impl<'a> Inspect<'a> for Named {
 	type UserData = &'a mut dyn Any;
-	const can_add: bool = true;
+	const CAN_ADD: bool = true;
 
 	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
 		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
@@ -105,7 +105,7 @@ impl<'a> Inspect<'a> for Named {
 
 impl<'a> Inspect<'a> for Transform {
 	type UserData = &'a mut dyn Any;
-	const can_add: bool = true;
+	const CAN_ADD: bool = true;
 
 	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
 		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
@@ -189,7 +189,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::SpriteRender {
 
 impl<'a> Inspect<'a> for amethyst::renderer::Rgba {
 	type UserData = &'a mut Any;
-	const can_add: bool = true;
+	const CAN_ADD: bool = true;
 
 	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
 		use amethyst::renderer::Rgba;
@@ -210,7 +210,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::Rgba {
 
 impl<'a> Inspect<'a> for amethyst::renderer::Blink {
 	type UserData = &'a mut Any;
-	const can_add: bool = true;
+	const CAN_ADD: bool = true;
 
 	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
 		use amethyst::renderer::Rgba;
@@ -231,11 +231,11 @@ impl<'a> Inspect<'a> for amethyst::renderer::Blink {
 #[macro_export]
 macro_rules! inspect_marker {
 	($cmp: ident) => {
-		impl<'a> Inspect<'a> for $cmp {
+		impl<'a> $crate::Inspect<'a> for $cmp {
 			type UserData = &'a mut dyn std::any::Any;
-			const can_add: bool = true;
+			const CAN_ADD: bool = true;
 
-			fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
+			fn add(storage: &mut amethyst::ecs::WriteStorage<'_, Self>, entity: amethyst::ecs::Entity, user_data: Self::UserData) {
 				storage.insert(entity, $cmp).unwrap();
 			}
 		}
@@ -272,7 +272,7 @@ macro_rules! inspector {
 								if ui.collapsing_header(imgui::im_str!("add component")).build() {
 									let mut hor_pos = 0.;
 									$(
-										if $cmp::can_add && ![<hello $cmp>].contains(entity) {
+										if $cmp::CAN_ADD && ![<hello $cmp>].contains(entity) {
 											if ui.small_button(imgui::im_str!("{}", stringify!($cmp))) {
 												$cmp::add(&mut [<hello $cmp>], entity, &mut inspector_state.user_data);
 											}
@@ -293,7 +293,7 @@ macro_rules! inspector {
 									if [<hello $cmp>].contains(entity) {
 
 										let expanded = ui.collapsing_header(imgui::im_str!("{}##header", stringify!($cmp))).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
-										if $cmp::can_remove {
+										if $cmp::CAN_REMOVE {
 											ui.same_line(0.);
 											if ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp))) {
 												[<hello $cmp>].remove(entity);
