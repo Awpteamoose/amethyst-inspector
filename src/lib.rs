@@ -324,6 +324,7 @@ macro_rules! inspector {
 							.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 							.build(move || {
 								let entity = if let Some(x) = inspector_state.selected { x } else { return; };
+								if !entities.is_alive(entity) { return; }
 								$($cmp::setup(&mut [<data $cmp>], entity);)+
 
 								if ui.small_button(imgui::im_str!("make child##inspector{:?}", entity)) {
