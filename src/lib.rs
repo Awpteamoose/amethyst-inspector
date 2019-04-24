@@ -1,25 +1,24 @@
+pub use amethyst;
 use amethyst::{
 	core::{transform::Transform, Named},
 	ecs::prelude::*,
-	renderer::{Hidden, HiddenPropagate, Blink}
+	renderer::{Blink, Hidden, HiddenPropagate, Rgba, SpriteRender},
 };
-pub use amethyst_imgui::imgui;
+pub use amethyst_imgui;
+use amethyst_imgui::imgui;
 pub use paste;
-use std::any::Any;
 
 #[derive(Default)]
-pub struct InspectorState<UserData: Default + Any> {
+pub struct InspectorState {
+	// pub to_save: Vec<Entity>,
 	pub selected: Option<Entity>,
-	pub user_data: UserData,
 }
 
 #[derive(Default, Clone, Copy)]
-pub struct InspectorHierarchy<UserData> {
-	_pd: std::marker::PhantomData<UserData>,
-}
-impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for InspectorHierarchy<UserData> {
+pub struct InspectorHierarchy;
+impl<'s> System<'s> for InspectorHierarchy {
 	type SystemData = (
-		Write<'s, InspectorState<UserData>>,
+		Write<'s, InspectorState>,
 		ReadStorage<'s, amethyst::core::Named>,
 		ReadStorage<'s, amethyst::core::Parent>,
 		ReadExpect<'s, amethyst::core::ParentHierarchy>,
@@ -31,12 +30,12 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 			ui.window(imgui::im_str!("Hierarchy"))
 				.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 				.build(move || {
-					fn render_boy<UserData: Default + Any>(
+					fn render_boy(
 						entity: Entity,
 						hierarchy: &amethyst::core::ParentHierarchy,
 						names: &ReadStorage<'_, amethyst::core::Named>,
 						ui: &imgui::Ui<'_>,
-						inspector_state: &mut InspectorState<UserData>,
+						inspector_state: &mut InspectorState,
 					) {
 						let children = hierarchy.children(entity);
 
@@ -79,39 +78,50 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 }
 
 pub trait Inspect<'a>: Component {
-	type UserData;
+	type SystemData: SystemData<'a>;
 	const CAN_ADD: bool = false;
 	const CAN_REMOVE: bool = true;
 
-	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {}
-	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {}
-	fn setup(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {}
+	fn inspect(data: &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {}
+	fn add(data: &Self::SystemData, entity: Entity) {}
+	fn setup(data: &Self::SystemData, entity: Entity) {}
 }
 
 impl<'a> Inspect<'a> for Named {
-	type UserData = &'a mut dyn Any;
+	type SystemData = (ReadStorage<'a, Self>, Read<'a, LazyUpdate>);
+
 	const CAN_ADD: bool = true;
 
-	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
-		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+		let me = if let Some(x) = storage.get(entity) {
+			x
+		} else {
+			return;
+		};
 		let mut buf = imgui::ImString::new(me.name.clone());
 		ui.input_text(imgui::im_str!("Entity {}/{}##named", entity.id(), entity.gen().id()), &mut buf)
 			.resize_buffer(true)
 			.build();
-		me.name = std::borrow::Cow::from(String::from(buf.to_str()));
+
+		lazy.insert(entity, Named::new(buf.to_str().to_owned()));
 	}
 
-	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
-		storage.insert(entity, Named::new(format!("Entity {}/{}", entity.id(), entity.gen().id()))).unwrap();
+	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+		lazy.insert(entity, Named::new(format!("Entity {}/{}", entity.id(), entity.gen().id())));
 	}
 }
 
 impl<'a> Inspect<'a> for Transform {
-	type UserData = &'a mut dyn Any;
+	type SystemData = (ReadStorage<'a, Self>, Read<'a, LazyUpdate>);
+
 	const CAN_ADD: bool = true;
 
-	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
-		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+		let mut me = if let Some(x) = storage.get(entity) {
+			x.clone()
+		} else {
+			return;
+		};
 
 		{
 			let translation = me.translation();
@@ -127,12 +137,9 @@ impl<'a> Inspect<'a> for Transform {
 			if rotation == -180. {
 				rotation = 180.;
 			}
-			ui.drag_float(
-				imgui::im_str!("rotation##transform{:?}", entity),
-				&mut rotation,
-			)
-			.speed(0.25)
-			.build();
+			ui.drag_float(imgui::im_str!("rotation##transform{:?}", entity), &mut rotation)
+				.speed(0.25)
+				.build();
 			me.set_rotation_2d(rotation.to_radians());
 		}
 
@@ -144,90 +151,120 @@ impl<'a> Inspect<'a> for Transform {
 				.build();
 			me.set_scale(v[0], v[1], 1.);
 		}
+
+		lazy.insert(entity, me);
+
+		// let mut current_entity
+		// let parent = parents.get(entitiy);
+
+		// for (i, entity) in entities.join().enumerate() {
+		//     if let Some(e) = parent {
+		//         if e == entity {
+		//             current_entity = i;
+		//         }
+		//     }
+		//     if entity == Some(parent)
+		// }
+		// ui.combo(imgui::im_str!("parent##transform{:?}", entity), &mut current_item, &items, height_in_items: 10);
 	}
 
-	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
-		storage.insert(entity, Transform::default());
-	}
-}
-
-// TODO: rework these so it can be a non-contiguous array of sprites etc
-pub trait MaxSprites {
-	fn max_sprites(&self) -> i32;
-	fn set_max_sprites(&mut self, value: i32);
-}
-
-pub struct SpriteInfo(pub u32);
-
-impl Component for SpriteInfo {
-	type Storage = DenseVecStorage<Self>;
-}
-
-impl<'a> Inspect<'a> for SpriteInfo {
-	type UserData = &'a mut dyn MaxSprites;
-
-	fn setup(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
-		let me = if let Some(x) = storage.get(entity) { x } else { return; };
-		user_data.set_max_sprites(me.0 as i32);
+	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+		lazy.insert(entity, Transform::default());
 	}
 }
 
-impl<'a> Inspect<'a> for amethyst::renderer::SpriteRender {
-	type UserData = &'a mut dyn MaxSprites;
+impl<'a> Inspect<'a> for SpriteRender {
+	type SystemData = (
+		ReadStorage<'a, Self>,
+		ReadExpect<'a, amethyst::assets::AssetStorage<amethyst::renderer::SpriteSheet>>,
+		Read<'a, LazyUpdate>,
+	);
 
-	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, user_data: Self::UserData) {
-		let mut me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+	fn inspect((storage, sprites, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+		let mut me = if let Some(x) = storage.get(entity) {
+			x.clone()
+		} else {
+			return;
+		};
 
 		let mut sprite_number = me.sprite_number as i32;
 		ui.slider_int(
 			imgui::im_str!("# sprite##sprite_render{:?}", entity),
 			&mut sprite_number,
 			0,
-			user_data.max_sprites(),
+			sprites.get(&me.sprite_sheet).unwrap().sprites.len() as i32 - 1,
 		)
 		.build();
 		me.sprite_number = sprite_number as usize;
+
+		lazy.insert(entity, me);
 	}
 }
 
-impl<'a> Inspect<'a> for amethyst::renderer::Rgba {
-	type UserData = &'a mut Any;
+impl<'a> Inspect<'a> for Rgba {
+	type SystemData = (ReadStorage<'a, Self>, Read<'a, LazyUpdate>);
+
 	const CAN_ADD: bool = true;
 
-	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
-		use amethyst::renderer::Rgba;
-
-		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
+	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+		let me = if let Some(x) = storage.get(entity) {
+			x
+		} else {
+			return;
+		};
 
 		let mut v: [f32; 4] = [me.0, me.1, me.2, me.3];
 		ui.drag_float4(imgui::im_str!("colour tint##rgba{:?}", entity), &mut v)
 			.speed(0.1)
 			.build();
-		std::mem::replace(me, v.into());
+
+		lazy.insert(entity, Rgba::from(v));
 	}
 
-	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
-		storage.insert(entity, amethyst::renderer::Rgba::white()).unwrap();
+	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+		lazy.insert(entity, amethyst::renderer::Rgba::white());
 	}
 }
 
-impl<'a> Inspect<'a> for amethyst::renderer::Blink {
-	type UserData = &'a mut Any;
+impl<'a> Inspect<'a> for Blink {
+	type SystemData = (ReadStorage<'a, Self>, Read<'a, LazyUpdate>);
+
 	const CAN_ADD: bool = true;
 
-	fn inspect(storage: &mut WriteStorage<'_, Self>, entity: Entity, ui: &imgui::Ui<'_>, _user_data: Self::UserData) {
-		use amethyst::renderer::Rgba;
+	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+		let &Blink {
+			mut delay,
+			timer,
+			mut absolute_time,
+		} = if let Some(x) = storage.get(entity) {
+			x
+		} else {
+			return;
+		};
+		ui.drag_float(imgui::im_str!("delay##blink{:?}", entity), &mut delay)
+			.speed(0.1)
+			.build();
+		ui.checkbox(imgui::im_str!("absolute time##blink{:?}", entity), &mut absolute_time);
 
-		let me = if let Some(x) = storage.get_mut(entity) { x } else { return; };
-		ui.drag_float(
-			imgui::im_str!("delay##blink{:?}", entity),
-			&mut me.delay,
-		).speed(0.1).build();
-		ui.checkbox(imgui::im_str!("absolute time##blink{:?}", entity), &mut me.absolute_time);
+		lazy.insert(
+			entity,
+			Blink {
+				delay,
+				timer,
+				absolute_time,
+			},
+		);
 	}
 
-	fn add(storage: &mut WriteStorage<'_, Self>, entity: Entity, user_data: Self::UserData) {
-		storage.insert(entity, Blink { delay: 0.5, timer: 0., absolute_time: false }).unwrap();
+	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+		lazy.insert(
+			entity,
+			Blink {
+				delay: 0.5,
+				timer: 0.,
+				absolute_time: false,
+			},
+		);
 	}
 }
 
@@ -235,11 +272,12 @@ impl<'a> Inspect<'a> for amethyst::renderer::Blink {
 macro_rules! inspect_marker {
 	($cmp: ident) => {
 		impl<'a> $crate::Inspect<'a> for $cmp {
-			type UserData = &'a mut dyn std::any::Any;
+			type SystemData = $crate::amethyst::ecs::Read<'a, $crate::amethyst::ecs::LazyUpdate>;
+
 			const CAN_ADD: bool = true;
 
-			fn add(storage: &mut amethyst::ecs::WriteStorage<'_, Self>, entity: amethyst::ecs::Entity, user_data: Self::UserData) {
-				storage.insert(entity, $cmp).unwrap();
+			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) {
+				lazy.insert(entity, $cmp);
 			}
 		}
 	};
@@ -250,34 +288,37 @@ inspect_marker!(HiddenPropagate);
 
 #[macro_export]
 macro_rules! inspector {
-	($user_data:ident, $($cmp:ident),+$(,)*) => {
+	($($cmp:ident),+$(,)*) => {
 		#[derive(Default)]
 		#[allow(missing_copy_implementations)]
 		pub struct Inspector;
 		impl<'s> System<'s> for Inspector {
 			type SystemData = (
-				Write<'s, $crate::InspectorState<$user_data>>,
-				$(WriteStorage<'s, $cmp>,)+
+				$crate::amethyst::ecs::Write<'s, $crate::InspectorState>,
+				$crate::amethyst::ecs::Read<'s, $crate::amethyst::ecs::LazyUpdate>,
+				($($crate::amethyst::ecs::ReadStorage<'s, $cmp>,)+),
+				($(<$cmp as $crate::Inspect<'s>>::SystemData,)+),
 			);
 
 			$crate::paste::item! {
 				#[allow(non_snake_case)]
-				fn run(&mut self, (mut inspector_state, $(mut [<hello $cmp>],)+): Self::SystemData) {
+				fn run(&mut self, (mut inspector_state, lazy, ($([<store $cmp>],)+), ($(mut [<data $cmp>],)+)): Self::SystemData) {
 					amethyst_imgui::with(move |ui| {
-						use $crate::imgui;
+						use $crate::amethyst_imgui::imgui;
 						use $crate::Inspect;
+
 						ui.window(imgui::im_str!("Inspector"))
 							.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 							.build(move || {
 								let entity = if let Some(x) = inspector_state.selected { x } else { return; };
-								$($cmp::setup(&mut [<hello $cmp>], entity, &mut inspector_state.user_data);)+
+								$($cmp::setup(&mut [<data $cmp>], entity);)+
 
 								if ui.collapsing_header(imgui::im_str!("add component")).build() {
 									let mut hor_pos = 0.;
 									$(
-										if $cmp::CAN_ADD && ![<hello $cmp>].contains(entity) {
+										if $cmp::CAN_ADD && ![<store $cmp>].contains(entity) {
 											if ui.small_button(imgui::im_str!("{}", stringify!($cmp))) {
-												$cmp::add(&mut [<hello $cmp>], entity, &mut inspector_state.user_data);
+												$cmp::add(&mut [<data $cmp>], entity);
 											}
 											hor_pos += ui.get_item_rect_size().0 + ui.imgui().style().item_spacing.x;
 											if hor_pos < ui.get_content_region_avail().0 {
@@ -295,20 +336,26 @@ macro_rules! inspector {
 								ui.separator();
 
 								$(
-									if [<hello $cmp>].contains(entity) {
-
+									if [<store $cmp>].contains(entity) {
+										let mut remove = false;
 										let expanded = ui.collapsing_header(imgui::im_str!("{}##header", stringify!($cmp))).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
 										if $cmp::CAN_REMOVE {
 											ui.same_line(0.);
-											if ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp))) {
-												[<hello $cmp>].remove(entity);
-											}
+											remove = ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp)));
 										}
-										if expanded {
-											$cmp::inspect(&mut [<hello $cmp>], entity, ui, &mut inspector_state.user_data);
+										if remove {
+											lazy.remove::<$cmp>(entity);
+										} else if expanded {
+											$cmp::inspect(&mut [<data $cmp>], entity, ui);
 										}
 									}
 								)+
+
+								// ui.separator();
+
+								// if ui.small_button(imgui::im_str!("save##inspector")) {
+								//     inspector_state.to_save.push(entity);
+								// }
 							});
 					});
 				}

@@ -153,9 +153,7 @@ Drop me a line on discord or create an issue if you can help or have advice:
 * Make a modal or smth specifying properties when adding components
 * Create/remove entities
 * Reparent entities (at least via inspector menu)
-* Somehow get access to storages to be able to more easily use data form other componens and get rid of `UserData`
 * Save/load entities
-	* idk it doesn't look like amethyst's prefabs can save
 	* since everything is running in a system, somehow have to be able to specify resource handles and whatnot
 
 ![screenshot](https://raw.githubusercontent.com/awpteamoose/amethyst-inspector/master/screenshot.png)
