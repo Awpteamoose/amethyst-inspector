@@ -23,9 +23,10 @@ impl<'s> System<'s> for InspectorHierarchy {
 		ReadStorage<'s, amethyst::core::Parent>,
 		ReadExpect<'s, amethyst::core::ParentHierarchy>,
 		Entities<'s>,
+		Read<'s, LazyUpdate>,
 	);
 
-	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities): Self::SystemData) {
+	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities, lazy): Self::SystemData) {
 		amethyst_imgui::with(move |ui| {
 			ui.window(imgui::im_str!("Hierarchy"))
 				.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
@@ -36,6 +37,8 @@ impl<'s> System<'s> for InspectorHierarchy {
 						names: &ReadStorage<'_, amethyst::core::Named>,
 						ui: &imgui::Ui<'_>,
 						inspector_state: &mut InspectorState,
+						entities: &amethyst::ecs::world::EntitiesRes,
+						lazy: &LazyUpdate,
 					) {
 						let children = hierarchy.children(entity);
 
@@ -45,6 +48,15 @@ impl<'s> System<'s> for InspectorHierarchy {
 							format!("Entity {}/{}", entity.id(), entity.gen().id())
 						};
 
+						macro_rules! tree_node_buttons {
+							() => {
+								ui.same_line(0.);
+								if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
+									inspector_state.selected = Some(entity);
+								}
+							};
+						}
+
 						let mut opened = false;
 						ui.tree_node(imgui::im_str!("{}##{:?}", label, entity))
 							.label(imgui::im_str!("{}", label))
@@ -52,25 +64,23 @@ impl<'s> System<'s> for InspectorHierarchy {
 							.leaf(children.is_empty())
 							.build(|| {
 								opened = true;
-								ui.same_line(0.);
-								if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
-									inspector_state.selected = Some(entity);
-								}
+								tree_node_buttons!();
 								for child in children {
-									render_boy(*child, hierarchy, names, ui, inspector_state);
+									render_boy(*child, hierarchy, names, ui, inspector_state, &entities, &lazy);
 								}
 							});
 
 						if !opened {
-							ui.same_line(0.);
-							if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
-								inspector_state.selected = Some(entity);
-							}
+							tree_node_buttons!();
 						}
 					};
 
+					if ui.small_button(imgui::im_str!("new entity##hierarchy")) {
+						lazy.create_entity(&entities).build();
+					}
+					ui.separator();
 					for (entity, _) in (&entities, !&parents).join() {
-						render_boy(entity, &hierarchy, &names, &ui, &mut inspector_state);
+						render_boy(entity, &hierarchy, &names, &ui, &mut inspector_state, &entities, &lazy);
 					}
 				});
 		});
@@ -298,13 +308,14 @@ macro_rules! inspector {
 			type SystemData = (
 				$crate::amethyst::ecs::Write<'s, $crate::InspectorState>,
 				$crate::amethyst::ecs::Read<'s, $crate::amethyst::ecs::LazyUpdate>,
+				$crate::amethyst::ecs::Entities<'s>,
 				($($crate::amethyst::ecs::ReadStorage<'s, $cmp>,)+),
 				($(<$cmp as $crate::Inspect<'s>>::SystemData,)+),
 			);
 
 			$crate::paste::item! {
 				#[allow(non_snake_case)]
-				fn run(&mut self, (mut inspector_state, lazy, ($([<store $cmp>],)+), ($(mut [<data $cmp>],)+)): Self::SystemData) {
+				fn run(&mut self, (mut inspector_state, lazy, entities, ($([<store $cmp>],)+), ($(mut [<data $cmp>],)+)): Self::SystemData) {
 					amethyst_imgui::with(move |ui| {
 						use $crate::amethyst_imgui::imgui;
 						use $crate::Inspect;
@@ -314,6 +325,16 @@ macro_rules! inspector {
 							.build(move || {
 								let entity = if let Some(x) = inspector_state.selected { x } else { return; };
 								$($cmp::setup(&mut [<data $cmp>], entity);)+
+
+								if ui.small_button(imgui::im_str!("make child##inspector{:?}", entity)) {
+									lazy.create_entity(&entities)
+										.with(amethyst::core::transform::Parent::new(entity))
+										.build();
+								}
+								ui.same_line(0.);
+								if ui.small_button(imgui::im_str!("remove##inspector{:?}", entity)) {
+									lazy.exec_mut(move |w| w.delete_entity(entity).unwrap());
+								}
 
 								if ui.collapsing_header(imgui::im_str!("add component##{:?}", entity)).build() {
 									let mut hor_pos = 0.;
@@ -333,9 +354,9 @@ macro_rules! inspector {
 									if hor_pos > 0. {
 										ui.new_line();
 									}
-								}
 
-								ui.separator();
+									ui.separator();
+								}
 
 								$(
 									if [<store $cmp>].contains(entity) {
