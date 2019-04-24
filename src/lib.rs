@@ -305,7 +305,7 @@ macro_rules! inspector {
 								let entity = if let Some(x) = inspector_state.selected { x } else { return; };
 								$($cmp::setup(&mut [<data $cmp>], entity);)+
 
-								if ui.collapsing_header(imgui::im_str!("add component")).build() {
+								if ui.collapsing_header(imgui::im_str!("add component##{:?}", entity)).build() {
 									let mut hor_pos = 0.;
 									$(
 										if $cmp::CAN_ADD && ![<store $cmp>].contains(entity) {
@@ -330,7 +330,7 @@ macro_rules! inspector {
 								$(
 									if [<store $cmp>].contains(entity) {
 										let mut remove = false;
-										let expanded = ui.collapsing_header(imgui::im_str!("{}##header", stringify!($cmp))).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
+										let expanded = ui.collapsing_header(imgui::im_str!("{}##header{:?}", stringify!($cmp), entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
 										if $cmp::CAN_REMOVE {
 											ui.same_line(0.);
 											remove = ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp)));
