@@ -28,49 +28,52 @@ impl<'s, UserData: 'static + Sync + Send + Default + Any> System<'s> for Inspect
 
 	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities): Self::SystemData) {
 		amethyst_imgui::with(move |ui| {
-			ui.window(imgui::im_str!("Hierarchy")).build(move || {
-				fn render_boy<UserData: Default + Any>(
-					entity: Entity,
-					hierarchy: &amethyst::core::ParentHierarchy,
-					names: &ReadStorage<'_, amethyst::core::Named>,
-					ui: &imgui::Ui<'_>,
-					inspector_state: &mut InspectorState<UserData>,
-				) {
-					let children = hierarchy.children(entity);
+			ui.window(imgui::im_str!("Hierarchy"))
+				.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
+				.build(move || {
+					fn render_boy<UserData: Default + Any>(
+						entity: Entity,
+						hierarchy: &amethyst::core::ParentHierarchy,
+						names: &ReadStorage<'_, amethyst::core::Named>,
+						ui: &imgui::Ui<'_>,
+						inspector_state: &mut InspectorState<UserData>,
+					) {
+						let children = hierarchy.children(entity);
 
-					let label: imgui::ImString = if let Some(name) = names.get(entity) {
-						imgui::im_str!("{}", name.name).into()
-					} else {
-						imgui::im_str!("Entity {}/{}", entity.id(), entity.gen().id()).into()
-					};
+						let label: String = if let Some(name) = names.get(entity) {
+							name.name.to_string()
+						} else {
+							format!("Entity {}/{}", entity.id(), entity.gen().id())
+						};
 
-					let mut opened = false;
-					ui.tree_node(&label)
-						.selected(matches::matches!(inspector_state.selected, Some(x) if x == entity))
-						.leaf(children.is_empty())
-						.build(|| {
-							opened = true;
+						let mut opened = false;
+						ui.tree_node(imgui::im_str!("{}##{:?}", label, entity))
+							.label(imgui::im_str!("{}", label))
+							.selected(matches::matches!(inspector_state.selected, Some(x) if x == entity))
+							.leaf(children.is_empty())
+							.build(|| {
+								opened = true;
+								ui.same_line(0.);
+								if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
+									inspector_state.selected = Some(entity);
+								}
+								for child in children {
+									render_boy(*child, hierarchy, names, ui, inspector_state);
+								}
+							});
+
+						if !opened {
 							ui.same_line(0.);
 							if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
 								inspector_state.selected = Some(entity);
 							}
-							for child in children {
-								render_boy(*child, hierarchy, names, ui, inspector_state);
-							}
-						});
-
-					if !opened {
-						ui.same_line(0.);
-						if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
-							inspector_state.selected = Some(entity);
 						}
-					}
-				};
+					};
 
-				for (entity, _) in (&entities, !&parents).join() {
-					render_boy(entity, &hierarchy, &names, &ui, &mut inspector_state);
-				}
-			});
+					for (entity, _) in (&entities, !&parents).join() {
+						render_boy(entity, &hierarchy, &names, &ui, &mut inspector_state);
+					}
+				});
 		});
 	}
 }
@@ -288,6 +291,8 @@ macro_rules! inspector {
 										ui.new_line();
 									}
 								}
+
+								ui.separator();
 
 								$(
 									if [<hello $cmp>].contains(entity) {
