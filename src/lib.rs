@@ -99,7 +99,10 @@ impl<'a> Inspect<'a> for Named {
 			.resize_buffer(true)
 			.build();
 
-		lazy.insert(entity, Named::new(buf.to_str().to_owned()));
+		let new_name = buf.to_str().to_owned();
+		if me.name != new_name {
+			lazy.insert(entity, Named::new(new_name));
+		}
 	}
 
 	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
@@ -113,38 +116,41 @@ impl<'a> Inspect<'a> for Transform {
 	const CAN_ADD: bool = true;
 
 	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
-		let mut me = if let Some(x) = storage.get(entity) { x.clone() } else { return; };
+		let me = if let Some(x) = storage.get(entity) { x } else { return; };
+		let mut new_me = me.clone();
 
 		{
-			let translation = me.translation();
+			let translation = new_me.translation();
 			let mut v: [f32; 3] = [translation[0], translation[1], translation[2]];
 			ui.drag_float3(imgui::im_str!("translation##transform{:?}", entity), &mut v)
 				.speed(0.1)
 				.build();
-			me.set_translation(v.into());
+			new_me.set_translation(v.into());
 		}
 
 		{
-			let mut rotation = me.rotation().euler_angles().2.to_degrees();
+			let mut rotation = new_me.rotation().euler_angles().2.to_degrees();
 			if rotation == -180. {
 				rotation = 180.;
 			}
 			ui.drag_float(imgui::im_str!("rotation##transform{:?}", entity), &mut rotation)
 				.speed(0.25)
 				.build();
-			me.set_rotation_2d(rotation.to_radians());
+			new_me.set_rotation_2d(rotation.to_radians());
 		}
 
 		{
-			let scale = me.scale().xy();
+			let scale = new_me.scale().xy();
 			let mut v: [f32; 2] = [scale[0], scale[1]];
 			ui.drag_float2(imgui::im_str!("scale##transform{:?}", entity), &mut v)
 				.speed(0.1)
 				.build();
-			me.set_scale(v[0], v[1], 1.);
+			new_me.set_scale(v[0], v[1], 1.);
 		}
 
-		lazy.insert(entity, me);
+		if *me != new_me {
+			lazy.insert(entity, new_me);
+		}
 
 		// let mut current_entity
 		// let parent = parents.get(entitiy);
@@ -187,9 +193,11 @@ impl<'a> Inspect<'a> for SpriteRender {
 			sprites.get(&me.sprite_sheet).unwrap().sprites.len() as i32 - 1,
 		)
 		.build();
-		me.sprite_number = sprite_number as usize;
 
-		lazy.insert(entity, me);
+		if me.sprite_number != sprite_number as usize {
+			me.sprite_number = sprite_number as usize;
+			lazy.insert(entity, me);
+		}
 	}
 }
 
@@ -210,7 +218,9 @@ impl<'a> Inspect<'a> for Rgba {
 			.speed(0.1)
 			.build();
 
-		lazy.insert(entity, Rgba::from(v));
+		if *me != Rgba::from(v) {
+			lazy.insert(entity, Rgba::from(v));
+		}
 	}
 
 	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
