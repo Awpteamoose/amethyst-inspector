@@ -93,11 +93,7 @@ impl<'a> Inspect<'a> for Named {
 	const CAN_ADD: bool = true;
 
 	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
-		let me = if let Some(x) = storage.get(entity) {
-			x
-		} else {
-			return;
-		};
+		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut buf = imgui::ImString::new(me.name.clone());
 		ui.input_text(imgui::im_str!("Entity {}/{}##named", entity.id(), entity.gen().id()), &mut buf)
 			.resize_buffer(true)
@@ -117,11 +113,7 @@ impl<'a> Inspect<'a> for Transform {
 	const CAN_ADD: bool = true;
 
 	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
-		let mut me = if let Some(x) = storage.get(entity) {
-			x.clone()
-		} else {
-			return;
-		};
+		let mut me = if let Some(x) = storage.get(entity) { x.clone() } else { return; };
 
 		{
 			let translation = me.translation();
