@@ -21,12 +21,12 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 
 		if !texture_list.is_empty() {
 			let mut current = 0;
-			let mut items = Vec::<imgui::ImString>::with_capacity(9);
-			for i in 0 .. texture_list.len() {
-				if new_me == texture_list[i].1 {
+			let mut items = Vec::<imgui::ImString>::with_capacity(texture_list.len());
+			for (i, texture) in texture_list.iter().enumerate() {
+				if new_me == texture.1 {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{}", texture_list[i].0).into());
+				items.push(imgui::im_str!("{}", texture.0).into());
 			}
 
 			ui.combo(imgui::im_str!("texture##texture{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
