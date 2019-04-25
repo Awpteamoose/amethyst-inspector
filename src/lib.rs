@@ -1,10 +1,7 @@
 #![allow(clippy::type_complexity, clippy::float_cmp)]
 
 pub use amethyst;
-use amethyst::{
-	ecs::prelude::*,
-	renderer::{Hidden, HiddenPropagate},
-};
+use amethyst::ecs::prelude::*;
 pub use amethyst_imgui;
 use amethyst_imgui::imgui;
 pub use paste;
@@ -42,19 +39,19 @@ pub trait Inspect<'a>: Component {
 
 #[macro_export]
 macro_rules! inspect_marker {
-	($cmp: ident) => {
+	($cmp: path) => {
 		impl<'a> $crate::Inspect<'a> for $cmp {
 			type SystemData = $crate::amethyst::ecs::Read<'a, $crate::amethyst::ecs::LazyUpdate>;
 
 			const CAN_ADD: bool = true;
 
-			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, $cmp); }
+			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self); }
 		}
 	};
 }
 
-inspect_marker!(Hidden);
-inspect_marker!(HiddenPropagate);
+inspect_marker!(amethyst::renderer::Hidden);
+inspect_marker!(amethyst::renderer::HiddenPropagate);
 
 #[macro_export]
 macro_rules! inspector {
