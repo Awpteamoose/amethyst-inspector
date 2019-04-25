@@ -8,3 +8,4 @@ amethyst = { git = "https://github.com/amethyst/amethyst.git" }
 amethyst-imgui = { git = "https://github.com/awpteamoose/amethyst-imgui.git" }
 matches = "0.1.8"
 paste = "0.1.5"
+automod = { git = "https://github.com/Awpteamoose/automod" }

@@ -100,5 +100,6 @@ Drop me a line on discord or create an issue if you can help or have advice:
 * Reparent entities (at least via inspector menu)
 * Save/load entities
 	* somehow must be able to specify resource handles and whatnot
+* idk maybe feature-gate some of the functionality if it's too involved for some usecases
 
 ![screenshot](https://raw.githubusercontent.com/awpteamoose/amethyst-inspector/master/screenshot.png)
