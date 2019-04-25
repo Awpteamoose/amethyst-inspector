@@ -80,7 +80,7 @@ macro_rules! inspector {
 							.build(move || {
 								let entity = if let Some(x) = inspector_state.selected { x } else { return; };
 								if !entities.is_alive(entity) { return; }
-								$($cmp::setup(&mut [<data $cmp>], entity);)+
+								$($cmp::setup(&[<data $cmp>], entity);)+
 
 								if ui.small_button(imgui::im_str!("make child##inspector{:?}", entity)) {
 									lazy.create_entity(&entities)
@@ -95,9 +95,9 @@ macro_rules! inspector {
 								if ui.collapsing_header(imgui::im_str!("add component##{:?}", entity)).build() {
 									let mut hor_pos = 0.;
 									$(
-										if ($cmp::CAN_ADD || $cmp::can_add(&mut [<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
+										if ($cmp::CAN_ADD || $cmp::can_add(&[<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
 											if ui.small_button(imgui::im_str!("{}", stringify!($cmp))) {
-												$cmp::add(&mut [<data $cmp>], entity);
+												$cmp::add(&[<data $cmp>], entity);
 											}
 											hor_pos += ui.get_item_rect_size().0 + ui.imgui().style().item_spacing.x;
 											if hor_pos < ui.get_content_region_avail().0 {
@@ -125,7 +125,7 @@ macro_rules! inspector {
 										if remove {
 											lazy.remove::<$cmp>(entity);
 										} else if expanded {
-											$cmp::inspect(&mut [<data $cmp>], entity, ui);
+											$cmp::inspect(&[<data $cmp>], entity, ui);
 										}
 									}
 								)+
