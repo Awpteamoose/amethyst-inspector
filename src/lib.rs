@@ -20,10 +20,7 @@ mod hierarchy;
 mod inspectors;
 
 pub use hierarchy::*;
-pub use inspectors::SpriteRender::SpriteList;
-pub use inspectors::TextureHandle::TextureList;
-pub use inspectors::UiText::FontList;
-pub use inspectors::UiTransformDebug::*;
+pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::*};
 
 #[derive(Default)]
 pub struct InspectorState {
@@ -51,9 +48,7 @@ macro_rules! inspect_marker {
 
 			const CAN_ADD: bool = true;
 
-			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) {
-				lazy.insert(entity, $cmp);
-			}
+			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, $cmp); }
 		}
 	};
 }
