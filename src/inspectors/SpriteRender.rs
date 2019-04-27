@@ -27,7 +27,7 @@ impl<'a> Inspect<'a> for SpriteRender {
 		if !sprite_list.is_empty() {
 			let mut current = 0;
 			let mut items = Vec::<imgui::ImString>::with_capacity(9);
-			let list_vec = sprite_list.into_iter().collect::<Vec<_>>();
+			let list_vec = sprite_list.iter().collect::<Vec<_>>();
 			for (i, (key, sprite_sheet)) in list_vec.iter().enumerate() {
 				if me.sprite_sheet == **sprite_sheet {
 					current = i as i32;
