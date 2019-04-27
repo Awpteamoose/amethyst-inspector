@@ -15,6 +15,7 @@ macro_rules! compare_fields {
 
 mod hierarchy;
 mod inspectors;
+pub mod utils;
 
 pub use hierarchy::*;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::*};
