@@ -6,7 +6,7 @@ use amethyst::{
 use amethyst_imgui::imgui;
 use crate::Inspect;
 
-pub type SpriteList = Vec<(&'static str, amethyst::renderer::SpriteSheetHandle)>;
+pub type SpriteList = std::collections::HashMap<&'static str, amethyst::renderer::SpriteSheetHandle>;
 
 impl<'a> Inspect<'a> for SpriteRender {
 	type SystemData = (
@@ -27,15 +27,16 @@ impl<'a> Inspect<'a> for SpriteRender {
 		if !sprite_list.is_empty() {
 			let mut current = 0;
 			let mut items = Vec::<imgui::ImString>::with_capacity(9);
-			for i in 0 .. sprite_list.len() {
-				if new_me.sprite_sheet == sprite_list[i].1 {
+			let list_vec = sprite_list.into_iter().collect::<Vec<_>>();
+			for (i, (key, sprite_sheet)) in list_vec.iter().enumerate() {
+				if me.sprite_sheet == **sprite_sheet {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{}", sprite_list[i].0).into());
+				items.push(imgui::im_str!("{}", key).into());
 			}
 
 			ui.combo(imgui::im_str!("sprite sheet##sprite_render{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
-			new_me.sprite_sheet = sprite_list[current as usize].1.clone();
+			new_me.sprite_sheet = list_vec[current as usize].1.clone();
 			if new_me.sprite_sheet != me.sprite_sheet {
 				new_me.sprite_number = 0;
 			}
@@ -61,6 +62,6 @@ impl<'a> Inspect<'a> for SpriteRender {
 	}
 
 	fn add((_, _, sprite_list, lazy): &Self::SystemData, entity: Entity) {
-		lazy.insert(entity, sprite_list[0].1.clone());
+		lazy.insert(entity, sprite_list.values().nth(0).unwrap().clone());
 	}
 }

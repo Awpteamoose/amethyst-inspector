@@ -7,7 +7,7 @@ use amethyst::{
 use amethyst_imgui::imgui;
 use crate::Inspect;
 
-pub type FontList = Vec<(&'static str, amethyst::ui::FontHandle)>;
+pub type FontList = std::collections::HashMap<&'static str, amethyst::ui::FontHandle>;
 
 impl<'a> Inspect<'a> for amethyst::ui::UiText {
 	type SystemData = (
@@ -37,15 +37,16 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 		if !font_list.is_empty() {
 			let mut current = 0;
 			let mut items = Vec::<imgui::ImString>::with_capacity(9);
-			for i in 0 .. font_list.len() {
-				if me.font == font_list[i].1 {
+			let list_vec = font_list.iter().collect::<Vec<_>>();
+			for (i, (key, font)) in list_vec.iter().enumerate() {
+				if me.font == **font {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{}", font_list[i].0).into());
+				items.push(imgui::im_str!("{}", key).into());
 			}
 
 			ui.combo(imgui::im_str!("font##ui_text{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
-			new_me.font = font_list[current as usize].1.clone();
+			new_me.font = list_vec[current as usize].1.clone();
 		}
 
 		ui.drag_float(imgui::im_str!("font size##ui_text{:?}", entity), &mut new_me.font_size)
@@ -111,7 +112,7 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 	}
 
 	fn add((_storage, transforms, loader, fonts, font_list, lazy): &Self::SystemData, entity: Entity) {
-		let font = if font_list.is_empty() { amethyst::ui::get_default_font(&loader, &fonts) } else { font_list[0].1.clone() };
+		let font = if font_list.is_empty() { amethyst::ui::get_default_font(&loader, &fonts) } else { font_list.values().nth(0).unwrap().clone() };
 		if !transforms.contains(entity) {
 			lazy.insert(entity, UiTransform::new(String::default(), amethyst::ui::Anchor::Middle, 0., 0., 0., 100., 100.));
 		}
