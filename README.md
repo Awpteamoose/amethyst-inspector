@@ -97,7 +97,6 @@ Drop me a line on discord or create an issue if you can help or have advice:
 
 * Derive macro for simple inspectors, also to replace `inspect_marker!`
 * Make a modal or smth specifying properties when adding components
-* Reparent entities (at least via inspector menu)
 * Save/load entities
 	* somehow must be able to specify resource handles and whatnot
 * idk maybe feature-gate some of the functionality if it's too involved for some usecases
