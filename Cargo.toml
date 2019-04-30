@@ -9,3 +9,4 @@ amethyst-imgui = { git = "https://github.com/awpteamoose/amethyst-imgui.git" }
 matches = "0.1"
 paste = "0.1"
 automod = { git = "https://github.com/Awpteamoose/automod" }
+specs-derive = "0.4"

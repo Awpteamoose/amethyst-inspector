@@ -6,7 +6,7 @@ use amethyst::{
 use amethyst_imgui::imgui;
 use crate::Inspect;
 
-pub type SpriteList = std::collections::HashMap<&'static str, amethyst::renderer::SpriteSheetHandle>;
+pub type SpriteList = std::collections::HashMap<String, amethyst::renderer::SpriteSheetHandle>;
 
 impl<'a> Inspect<'a> for SpriteRender {
 	type SystemData = (
@@ -62,6 +62,6 @@ impl<'a> Inspect<'a> for SpriteRender {
 	}
 
 	fn add((_, _, sprite_list, lazy): &Self::SystemData, entity: Entity) {
-		lazy.insert(entity, sprite_list.values().nth(0).unwrap().clone());
+		lazy.insert(entity, SpriteRender { sprite_sheet: sprite_list.values().nth(0).unwrap().clone(), sprite_number: 0 });
 	}
 }
