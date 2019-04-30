@@ -110,71 +110,72 @@ macro_rules! inspector {
 							.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 							.build(move || {
 								if let Some(entity) = inspector_state.selected {
-									if !entities.is_alive(entity) { return; }
-									$($cmp::setup(&[<data $cmp>], entity);)+
+									if entities.is_alive(entity) {
+										$($cmp::setup(&[<data $cmp>], entity);)+
 
-									if ui.small_button(imgui::im_str!("make child##inspector{:?}", entity)) {
-										lazy.create_entity(&entities)
-											.with(amethyst::core::transform::Parent::new(entity))
-											.build();
-									}
-									ui.same_line(0.);
-									if ui.small_button(imgui::im_str!("remove##inspector{:?}", entity)) {
-										lazy.exec_mut(move |w| w.delete_entity(entity).unwrap());
-									}
+										if ui.small_button(imgui::im_str!("make child##inspector{:?}", entity)) {
+											lazy.create_entity(&entities)
+												.with(amethyst::core::transform::Parent::new(entity))
+												.build();
+										}
+										ui.same_line(0.);
+										if ui.small_button(imgui::im_str!("remove##inspector{:?}", entity)) {
+											lazy.exec_mut(move |w| w.delete_entity(entity).unwrap());
+										}
 
-									if ui.collapsing_header(imgui::im_str!("add component")).build() {
-										let mut hor_pos = 0.;
-										$(
-											if ($cmp::CAN_ADD || $cmp::can_add(&[<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
-												if ui.small_button(imgui::im_str!("{}", stringify!($cmp))) {
-													$cmp::add(&[<data $cmp>], entity);
+										if ui.collapsing_header(imgui::im_str!("add component")).build() {
+											let mut hor_pos = 0.;
+											$(
+												if ($cmp::CAN_ADD || $cmp::can_add(&[<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
+													if ui.small_button(imgui::im_str!("{}", stringify!($cmp))) {
+														$cmp::add(&[<data $cmp>], entity);
+													}
+													hor_pos += ui.get_item_rect_size().0 + ui.imgui().style().item_spacing.x;
+													if hor_pos + ui.get_item_rect_size().0 < ui.get_content_region_avail().0 {
+														ui.same_line(0.);
+													} else {
+														hor_pos = 0.;
+													}
 												}
-												hor_pos += ui.get_item_rect_size().0 + ui.imgui().style().item_spacing.x;
-												if hor_pos + ui.get_item_rect_size().0 < ui.get_content_region_avail().0 {
+											)+
+											if hor_pos > 0. {
+												ui.new_line();
+											}
+
+											ui.separator();
+										}
+
+										$(
+											if [<store $cmp>].contains(entity) {
+												let mut remove = false;
+												let expanded = ui.collapsing_header(imgui::im_str!("{}##header{:?}", stringify!($cmp), entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
+												if $cmp::CAN_REMOVE {
 													ui.same_line(0.);
-												} else {
-													hor_pos = 0.;
+													remove = ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp)));
+												}
+												if remove {
+													lazy.remove::<$cmp>(entity);
+												} else if expanded {
+													$cmp::inspect(&[<data $cmp>], entity, ui);
 												}
 											}
 										)+
-										if hor_pos > 0. {
-											ui.new_line();
-										}
 
 										ui.separator();
-									}
 
-									$(
-										if [<store $cmp>].contains(entity) {
-											let mut remove = false;
-											let expanded = ui.collapsing_header(imgui::im_str!("{}##header{:?}", stringify!($cmp), entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
-											if $cmp::CAN_REMOVE {
-												ui.same_line(0.);
-												remove = ui.small_button(imgui::im_str!("remove##{}_header_remove", stringify!($cmp)));
-											}
-											if remove {
-												lazy.remove::<$cmp>(entity);
-											} else if expanded {
-												$cmp::inspect(&[<data $cmp>], entity, ui);
-											}
+										{
+											let mut buf = imgui::ImString::new(inspector_state.save_name.clone());
+											ui.input_text(imgui::im_str!("##inspector_save_input"), &mut buf)
+												.resize_buffer(true)
+												.build();
+											inspector_state.save_name = buf.to_str().to_owned();
 										}
-									)+
 
-									ui.separator();
-
-									{
-										let mut buf = imgui::ImString::new(inspector_state.save_name.clone());
-										ui.input_text(imgui::im_str!("##inspector_save_input"), &mut buf)
-											.resize_buffer(true)
-											.build();
-										inspector_state.save_name = buf.to_str().to_owned();
-									}
-
-									ui.same_line(0.);
-									if ui.small_button(imgui::im_str!("save##inspector_save_button")) {
-										let name = inspector_state.save_name.clone();
-										inspector_state.to_save.push((entity, name));
+										ui.same_line(0.);
+										if ui.small_button(imgui::im_str!("save##inspector_save_button")) {
+											let name = inspector_state.save_name.clone();
+											inspector_state.to_save.push((entity, name));
+										}
 									}
 								}
 
