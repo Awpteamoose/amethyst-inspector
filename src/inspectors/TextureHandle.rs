@@ -41,6 +41,6 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 
 	fn add((_, texture_list, lazy): &Self::SystemData, entity: Entity) {
 		// idk if I should insert UiTransform since idk if anything but the ui uses TextureHandle component
-		lazy.insert(entity, texture_list.values().nth(0).unwrap().clone());
+		lazy.insert(entity, texture_list.values().nth(0).unwrap_or_else(f!()).clone());
 	}
 }

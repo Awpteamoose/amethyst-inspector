@@ -1,5 +1,11 @@
 #![allow(clippy::type_complexity, clippy::float_cmp)]
 
+#[macro_use]
+macro_rules! f {
+	() => { || panic!("{}:{}", file!(), line!()) };
+	(_) => { |_| panic!("{}:{}", file!(), line!()) };
+}
+
 pub use amethyst;
 use amethyst::ecs::prelude::*;
 pub use amethyst_imgui;
