@@ -18,7 +18,7 @@ pub fn nullable_float(null_to: f32, speed: f32, label: &imgui::ImStr, v: &mut f3
 
 pub fn nullable_float2(null_to: f32, speed: f32, label: &imgui::ImStr, v: &mut [f32; 2], ui: &imgui::Ui<'_>) -> bool {
 	let spacing = ui.imgui().style().item_inner_spacing.x;
-	let width = ((ui.get_window_size().0 - spacing) * 0.65) / 2.;
+	let width = ((ui.get_window_size().0 - spacing * 1.5) * 0.65) / 2.;
 	let mut changed = false;
 	ui.with_id(label, || {
 		for i in 0 .. 2 {
@@ -40,7 +40,7 @@ pub fn nullable_float2(null_to: f32, speed: f32, label: &imgui::ImStr, v: &mut [
 
 pub fn nullable_float3(null_to: f32, speed: f32, label: &imgui::ImStr, v: &mut [f32; 3], ui: &imgui::Ui<'_>) -> bool {
 	let spacing = ui.imgui().style().item_inner_spacing.x;
-	let width = ((ui.get_window_size().0 - spacing * 2.) * 0.65) / 3.;
+	let width = ((ui.get_window_size().0 - spacing * 3.) * 0.65) / 3.;
 	let mut changed = false;
 	ui.with_id(label, || {
 		for i in 0 .. 3 {

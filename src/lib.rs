@@ -110,9 +110,10 @@ impl InspectControl for std::time::Duration {
 
 fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 	let mut changed = false;
+	ui.push_id(label);
 
 	let spacing = ui.imgui().style().item_inner_spacing.x;
-	let width = ((ui.get_window_size().0 - spacing * (size as f32 - 1.)) * 0.65) / size as f32;
+	let width = ((ui.get_window_size().0 - spacing * ((size - 1) as f32 * 1.5)) * 0.65) / size as f32;
 
 	for i in 0 .. size {
 		ui.with_id(i as i32, || {
@@ -128,6 +129,7 @@ fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &img
 	}
 
 	ui.text(label);
+	ui.pop_id();
 	changed
 }
 
