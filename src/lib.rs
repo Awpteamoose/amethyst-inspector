@@ -25,7 +25,7 @@ mod inspectors;
 pub mod utils;
 
 pub use hierarchy::*;
-pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::*};
+pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
 pub trait InspectControl {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
@@ -33,8 +33,7 @@ pub trait InspectControl {
 
 impl InspectControl for f32 {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut changed = false;
-		changed = ui.drag_float(label, self).speed(speed).build();
+		let mut changed = ui.drag_float(label, self).speed(speed).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			*self = null_to;
@@ -46,8 +45,7 @@ impl InspectControl for f32 {
 
 impl InspectControl for i32 {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut changed = false;
-		changed = ui.drag_int(label, self).speed(speed).build();
+		let mut changed = ui.drag_int(label, self).speed(speed).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			*self = null_to as i32;
@@ -59,9 +57,8 @@ impl InspectControl for i32 {
 
 impl InspectControl for u32 {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut changed = false;
 		let mut v = *self as i32;
-		changed = ui.drag_int(label, &mut v).speed(speed).build();
+		let mut changed = ui.drag_int(label, &mut v).speed(speed).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			*self = null_to as u32;
@@ -78,9 +75,8 @@ impl InspectControl for u32 {
 
 impl InspectControl for usize {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut changed = false;
 		let mut v = *self as i32;
-		changed = ui.drag_int(label, &mut v).speed(speed).build();
+		let mut changed = ui.drag_int(label, &mut v).speed(speed).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			*self = null_to as usize;
@@ -161,10 +157,10 @@ pub trait Inspect<'a>: Component {
 	const CAN_ADD: bool = false;
 	const CAN_REMOVE: bool = true;
 
-	fn inspect(data: &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {}
-	fn can_add(data: &Self::SystemData, entity: Entity) -> bool { false }
-	fn add(data: &Self::SystemData, entity: Entity) {}
-	fn setup(data: &Self::SystemData, entity: Entity) {}
+	fn inspect(data: &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {}
+	fn can_add(data: &mut Self::SystemData, entity: Entity) -> bool { false }
+	fn add(data: &mut Self::SystemData, entity: Entity) {}
+	fn setup(data: &mut Self::SystemData, entity: Entity) {}
 }
 
 #[macro_export]
@@ -175,7 +171,7 @@ macro_rules! inspect_marker {
 
 			const CAN_ADD: bool = true;
 
-			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self); }
+			fn add(lazy: &mut Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self); }
 		}
 	};
 }
@@ -188,7 +184,7 @@ macro_rules! inspect_default {
 
 			const CAN_ADD: bool = true;
 
-			fn add(lazy: &Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self::default()); }
+			fn add(lazy: &mut Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self::default()); }
 		}
 	};
 }
@@ -237,7 +233,7 @@ macro_rules! inspector {
 							.build(move || {
 								if let Some(entity) = inspector_state.selected {
 									if entities.is_alive(entity) {
-										$($cmp::setup(&[<data $cmp>], entity);)+
+										$(<$cmp as Inspect>::setup(&mut [<data $cmp>], entity);)+
 
 										if ui.small_button(im_str!("make child##inspector{:?}", entity)) {
 											lazy.create_entity(&entities)
@@ -252,9 +248,9 @@ macro_rules! inspector {
 										if ui.collapsing_header(im_str!("add component")).build() {
 											let mut hor_pos = 0.;
 											$(
-												if ($cmp::CAN_ADD || $cmp::can_add(&[<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
+												if (<$cmp as Inspect>::CAN_ADD || <$cmp as Inspect>::can_add(&mut [<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
 													if ui.small_button(im_str!("{}", stringify!($cmp))) {
-														$cmp::add(&[<data $cmp>], entity);
+														<$cmp as Inspect>::add(&mut [<data $cmp>], entity);
 													}
 													hor_pos += ui.get_item_rect_size().0 + ui.imgui().style().item_spacing.x;
 													if hor_pos + ui.get_item_rect_size().0 < ui.get_content_region_avail().0 {
@@ -275,14 +271,14 @@ macro_rules! inspector {
 											if [<store $cmp>].contains(entity) {
 												let mut remove = false;
 												let expanded = ui.collapsing_header(im_str!("{}##header{:?}", stringify!($cmp), entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
-												if $cmp::CAN_REMOVE {
+												if <$cmp as Inspect>::CAN_REMOVE {
 													ui.same_line(0.);
 													remove = ui.small_button(im_str!("remove##{}_header_remove", stringify!($cmp)));
 												}
 												if remove {
 													lazy.remove::<$cmp>(entity);
 												} else if expanded {
-													$cmp::inspect(&[<data $cmp>], entity, ui);
+													<$cmp as Inspect>::inspect(&mut [<data $cmp>], entity, ui);
 												}
 											}
 										)+

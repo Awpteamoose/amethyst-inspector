@@ -10,7 +10,7 @@ impl<'a> Inspect<'a> for UiTransform {
 
 	const CAN_ADD: bool = true;
 
-	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		use amethyst::ui::ScaleMode;
 
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
@@ -82,7 +82,7 @@ impl<'a> Inspect<'a> for UiTransform {
 		ui.pop_id();
 	}
 
-	fn add((_, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_, lazy): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(entity, UiTransform::new(String::default(), amethyst::ui::Anchor::Middle, 0., 0., 0., 100., 100.));
 	}
 }

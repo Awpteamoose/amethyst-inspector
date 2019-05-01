@@ -20,7 +20,7 @@ impl<'a> Inspect<'a> for Transform {
 
 	const CAN_ADD: bool = true;
 
-	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, lazy, data): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
 		let mut changed = false;
@@ -30,7 +30,7 @@ impl<'a> Inspect<'a> for Transform {
 
 		if data.radians {
 			let mut rotation = new_me.rotation().euler_angles().2;
-			changed = rotation.control(0., 0.25, im_str!("rotation"), ui) || changed;
+			changed = rotation.control(0., 0.25f32.to_radians(), im_str!("rotation"), ui) || changed;
 			new_me.set_rotation_2d(rotation);
 		} else {
 			let mut rotation = new_me.rotation().euler_angles().2.to_degrees();
@@ -51,7 +51,7 @@ impl<'a> Inspect<'a> for Transform {
 		ui.pop_id();
 	}
 
-	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_storage, lazy, _): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(entity, Transform::default());
 	}
 }

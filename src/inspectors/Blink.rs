@@ -10,7 +10,7 @@ impl<'a> Inspect<'a> for Blink {
 
 	const CAN_ADD: bool = true;
 
-	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let &Blink {
 			mut delay,
 			timer,
@@ -35,7 +35,7 @@ impl<'a> Inspect<'a> for Blink {
 		);
 	}
 
-	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_storage, lazy): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(
 			entity,
 			Blink {

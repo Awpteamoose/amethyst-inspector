@@ -10,7 +10,7 @@ impl<'a> Inspect<'a> for Rgba {
 
 	const CAN_ADD: bool = true;
 
-	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) {
 			x
 		} else {
@@ -27,7 +27,7 @@ impl<'a> Inspect<'a> for Rgba {
 		}
 	}
 
-	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_storage, lazy): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(entity, amethyst::renderer::Rgba::white());
 	}
 }

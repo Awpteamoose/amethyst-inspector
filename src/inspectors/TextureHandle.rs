@@ -11,7 +11,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn inspect((storage, texture_list, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, texture_list, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
 
@@ -35,11 +35,11 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 		}
 	}
 
-	fn can_add((_, texture_list, _): &Self::SystemData, _: Entity) -> bool {
+	fn can_add((_, texture_list, _): &mut Self::SystemData, _: Entity) -> bool {
 		!texture_list.is_empty()
 	}
 
-	fn add((_, texture_list, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_, texture_list, lazy): &mut Self::SystemData, entity: Entity) {
 		// idk if I should insert UiTransform since idk if anything but the ui uses TextureHandle component
 		lazy.insert(entity, texture_list.values().nth(0).unwrap_or_else(f!()).clone());
 	}

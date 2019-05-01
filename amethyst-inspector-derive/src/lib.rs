@@ -54,8 +54,8 @@ pub fn derive_inspect(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
 			const CAN_ADD: bool = #can_add;
 
-			fn inspect((storage, lazy): &Self::SystemData, entity: ::amethyst::ecs::Entity, ui: &::amethyst_imgui::imgui::Ui<'_>) { #inspect }
-			fn add((storage, lazy): &Self::SystemData, entity: ::amethyst::ecs::Entity) { #add }
+			fn inspect((storage, lazy): &mut Self::SystemData, entity: ::amethyst::ecs::Entity, ui: &::amethyst_imgui::imgui::Ui<'_>) { #inspect }
+			fn add((storage, lazy): &mut Self::SystemData, entity: ::amethyst::ecs::Entity) { #add }
 		}
 	};
 

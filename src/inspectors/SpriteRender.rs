@@ -16,7 +16,7 @@ impl<'a> Inspect<'a> for SpriteRender {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn inspect((storage, sprites, sprite_list, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, sprites, sprite_list, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) {
 			x
 		} else {
@@ -57,11 +57,11 @@ impl<'a> Inspect<'a> for SpriteRender {
 		}
 	}
 
-	fn can_add((_, _, sprite_list, _): &Self::SystemData, _: Entity) -> bool {
+	fn can_add((_, _, sprite_list, _): &mut Self::SystemData, _: Entity) -> bool {
 		!sprite_list.is_empty()
 	}
 
-	fn add((_, _, sprite_list, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_, _, sprite_list, lazy): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(entity, SpriteRender { sprite_sheet: sprite_list.values().nth(0).unwrap_or_else(f!()).clone(), sprite_number: 0 });
 	}
 }

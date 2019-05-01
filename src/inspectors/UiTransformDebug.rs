@@ -32,8 +32,8 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn setup((storage, ui_transforms, transforms, _, _, dimensions, _, cameras, entities, lazy): &Self::SystemData, inspectee: Entity) {
-		for (debug, entity) in (storage, entities).join() {
+	fn setup((storage, ui_transforms, transforms, _, _, dimensions, _, cameras, entities, lazy): &mut Self::SystemData, inspectee: Entity) {
+		for (debug, entity) in (&*storage, &*entities).join() {
 			if entity != inspectee && !debug.always { return; };
 			let transform = if let Some(x) = ui_transforms.get(entity) { x } else { return; };
 			let camera = if let Some(x) = cameras.get(debug.camera) { x } else { return; };
@@ -67,11 +67,11 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 		}
 	}
 
-	fn inspect((storage, _, _, _, _, _, names, cameras, entities, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, _, _, _, _, _, names, cameras, entities, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
 
-		let camera_entities = (cameras, entities).join().map(|(_, e)| e).collect::<Vec<Entity>>();
+		let camera_entities = (&*cameras, &*entities).join().map(|(_, e)| e).collect::<Vec<Entity>>();
 		if camera_entities.len() > 1 {
 			let mut current = 0;
 			let mut items = Vec::<imgui::ImString>::with_capacity(camera_entities.len());
@@ -105,12 +105,12 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 		}
 	}
 
-	fn can_add((_, ui_transforms, _, _, _, _, _, cameras, entities, _): &Self::SystemData, entity: Entity) -> bool {
-		(cameras, entities).join().nth(0).is_some() && ui_transforms.contains(entity)
+	fn can_add((_, ui_transforms, _, _, _, _, _, cameras, entities, _): &mut Self::SystemData, entity: Entity) -> bool {
+		(&*cameras, &*entities).join().nth(0).is_some() && ui_transforms.contains(entity)
 	}
 
-	fn add((_, _, _, _, _, _, _, cameras, entities, lazy): &Self::SystemData, entity: Entity) {
-		let (_, camera) = if let Some(x) = (cameras, entities).join().nth(0) { x } else { return; };
+	fn add((_, _, _, _, _, _, _, cameras, entities, lazy): &mut Self::SystemData, entity: Entity) {
+		let (_, camera) = if let Some(x) = (&*cameras, &*entities).join().nth(0) { x } else { return; };
 		lazy.insert(entity, UiTransformDebug { camera, color: Rgba::red(), children: false, always: true });
 	}
 }

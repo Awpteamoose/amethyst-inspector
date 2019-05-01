@@ -10,7 +10,7 @@ impl<'a> Inspect<'a> for Named {
 
 	const CAN_ADD: bool = true;
 
-	fn inspect((storage, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut buf = imgui::ImString::new(me.name.clone());
 		ui.input_text(imgui::im_str!("Entity {}/{}##named", entity.id(), entity.gen().id()), &mut buf)
@@ -23,7 +23,7 @@ impl<'a> Inspect<'a> for Named {
 		}
 	}
 
-	fn add((_storage, lazy): &Self::SystemData, entity: Entity) {
+	fn add((_storage, lazy): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(entity, Named::new(format!("Entity {}/{}", entity.id(), entity.gen().id())));
 	}
 }
