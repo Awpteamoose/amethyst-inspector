@@ -28,44 +28,67 @@ pub use hierarchy::*;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::*};
 
 pub trait InspectControl {
-	fn control(&mut self, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
 }
 
 impl InspectControl for f32 {
-	fn control(&mut self, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		ui.drag_float(label, self).build()
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		let mut changed = false;
+		changed = ui.drag_float(label, self).speed(speed).build();
+		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			changed = true;
+			*self = null_to;
+		}
+
+		changed
 	}
 }
 
-impl InspectControl for amethyst::core::math::Vector2<f32> {
-	fn control(&mut self, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let null_to = 0.;
-		let speed = 1.;
-
-		let mut v: [f32; 2] = [self[0], self[1]];
-		let mut changed = false;
-
-		let spacing = ui.imgui().style().item_inner_spacing.x;
-		let width = ((ui.get_window_size().0 - spacing) * 0.65) / 2.;
-
-		for i in 0 .. 2 {
-			ui.with_id(i, || {
-				ui.with_item_width(width, || {
-					changed = ui.drag_float(im_str!(""), &mut v[i as usize]).speed(speed).build() || changed;
-					if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-						changed = true;
-						v[i as usize] = null_to;
-					}
-					ui.same_line_spacing(0., spacing);
-				});
-			});
+impl InspectControl for std::time::Duration {
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		let mut v = self.as_millis() as i32;
+		let mut changed = ui.drag_int(label, &mut v).speed(speed).build();
+		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			changed = true;
+			v = null_to as i32;
 		}
-
-		ui.text(label);
-		self[0] = v[0];
-		self[1] = v[1];
-
+		*self = std::time::Duration::from_millis(v as u64);
 		changed
+	}
+}
+
+fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+	let mut changed = false;
+
+	let spacing = ui.imgui().style().item_inner_spacing.x;
+	let width = ((ui.get_window_size().0 - spacing * (size as f32 - 1.)) * 0.65) / size as f32;
+
+	for i in 0 .. size {
+		ui.with_id(i as i32, || {
+			ui.with_item_width(width, || {
+				changed = ui.drag_float(im_str!(""), &mut v[i as usize]).speed(speed).build() || changed;
+				if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+					changed = true;
+					v[i as usize] = null_to;
+				}
+				ui.same_line_spacing(0., spacing);
+			});
+		});
+	}
+
+	ui.text(label);
+	changed
+}
+
+impl InspectControl for amethyst::core::nalgebra::Vector2<f32> {
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		vec_inspect(2, self.as_mut_slice(), null_to, speed, label, ui)
+	}
+}
+
+impl InspectControl for amethyst::core::nalgebra::Vector3<f32> {
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		vec_inspect(3, self.as_mut_slice(), null_to, speed, label, ui)
 	}
 }
 
@@ -143,16 +166,17 @@ macro_rules! inspector {
 				($(<$cmp as $crate::Inspect<'s>>::SystemData,)+),
 			);
 
-			fn setup(&mut self, res: &mut Resources) {
+			#[cfg(features = "saveload")]
+			fn setup(&mut self, res: &mut ::amethyst::ecs::Resources) {
 				Self::SystemData::setup(res);
 				let mut state = res.fetch_mut::<$crate::InspectorState>();
-				state.prefabs = std::fs::read_dir("assets/prefabs").unwrap().map(|x| x.unwrap().file_name().into_string().unwrap()).collect();
+				state.prefabs = ::std::fs::read_dir("assets/prefabs").unwrap().map(|x| x.unwrap().file_name().into_string().unwrap()).collect();
 			}
 
 			$crate::paste::item! {
 				fn run(&mut self, (mut inspector_state, lazy, entities, ($([<store $cmp>],)+), ($(mut [<data $cmp>],)+)): Self::SystemData) {
 					amethyst_imgui::with(move |ui| {
-						use $crate::amethyst_imgui::imgui::{self, im_str};
+						use ::amethyst_imgui::imgui::{self, im_str};
 						use $crate::Inspect;
 
 						ui.window(im_str!("Inspector"))
@@ -210,37 +234,43 @@ macro_rules! inspector {
 											}
 										)+
 
-										ui.separator();
-
+										#[cfg(features = "saveload")]
 										{
-											let mut buf = imgui::ImString::new(inspector_state.save_name.clone());
-											ui.input_text(im_str!("##inspector_save_input"), &mut buf)
-												.resize_buffer(true)
-												.build();
-											inspector_state.save_name = buf.to_str().to_owned();
-										}
+											ui.separator();
 
-										ui.same_line(0.);
-										if ui.small_button(im_str!("save##inspector_save_button")) {
-											let name = inspector_state.save_name.clone();
-											inspector_state.to_save.push((entity, name));
+											{
+												let mut buf = imgui::ImString::new(inspector_state.save_name.clone());
+												ui.input_text(im_str!("##inspector_save_input"), &mut buf)
+													.resize_buffer(true)
+													.build();
+												inspector_state.save_name = buf.to_str().to_owned();
+											}
+
+											ui.same_line(0.);
+											if ui.small_button(im_str!("save##inspector_save_button")) {
+												let name = inspector_state.save_name.clone();
+												inspector_state.to_save.push((entity, name));
+											}
 										}
 									}
 								}
 
-								let mut current = inspector_state.selected_prefab as i32;
-								let strings = inspector_state.prefabs.iter().map(|x| imgui::ImString::from(im_str!("{}", x))).collect::<Vec<_>>();
-								ui.combo(
-									im_str!("##inspector_load_combo"),
-									&mut current,
-									strings.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(),
-									10,
-								);
-								inspector_state.selected_prefab = current as usize;
-								ui.same_line(0.);
-								if ui.small_button(im_str!("load##inspector_load_button")) {
-									let x = inspector_state.prefabs[inspector_state.selected_prefab].clone();
-									inspector_state.to_load.push(x);
+								#[cfg(features = "saveload")]
+								{
+									let mut current = inspector_state.selected_prefab as i32;
+									let strings = inspector_state.prefabs.iter().map(|x| imgui::ImString::from(im_str!("{}", x))).collect::<Vec<_>>();
+									ui.combo(
+										im_str!("##inspector_load_combo"),
+										&mut current,
+										strings.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(),
+										10,
+									);
+									inspector_state.selected_prefab = current as usize;
+									ui.same_line(0.);
+									if ui.small_button(im_str!("load##inspector_load_button")) {
+										let x = inspector_state.prefabs[inspector_state.selected_prefab].clone();
+										inspector_state.to_load.push(x);
+									}
 								}
 							});
 					});
