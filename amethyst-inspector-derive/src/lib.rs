@@ -26,6 +26,8 @@ struct FieldArgs {
 	null_to: Option<syn::Lit>,
 	#[darling(default)]
 	speed: Option<f32>,
+	#[darling(default)]
+	skip: Option<bool>,
 }
 
 #[proc_macro_derive(Inspect, attributes(inspect))]
@@ -67,6 +69,8 @@ fn inspect(data: &Data, name: &Ident) -> TokenStream {
 				Fields::Named(ref fields) => {
 					let recurse = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
+						let skip = args.skip.unwrap_or(false);
+						if skip { return quote_spanned! { f.span()=> {} }; };
 						let null_to = args.null_to.map(|x| quote!(#x)).unwrap_or(quote!(0.));
 						let speed = args.speed.unwrap_or(0.1);
 						let name = &f.ident;

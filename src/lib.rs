@@ -44,6 +44,57 @@ impl InspectControl for f32 {
 	}
 }
 
+impl InspectControl for i32 {
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		let mut changed = false;
+		changed = ui.drag_int(label, self).speed(speed).build();
+		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			changed = true;
+			*self = null_to as i32;
+		}
+
+		changed
+	}
+}
+
+impl InspectControl for u32 {
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		let mut changed = false;
+		let mut v = *self as i32;
+		changed = ui.drag_int(label, &mut v).speed(speed).build();
+		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			changed = true;
+			*self = null_to as u32;
+		}
+
+		if v < 0 {
+			v = 0;
+		}
+		*self = v as u32;
+
+		changed
+	}
+}
+
+impl InspectControl for usize {
+	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+		let mut changed = false;
+		let mut v = *self as i32;
+		changed = ui.drag_int(label, &mut v).speed(speed).build();
+		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			changed = true;
+			*self = null_to as usize;
+		}
+
+		if v < 0 {
+			v = 0;
+		}
+		*self = v as usize;
+
+		changed
+	}
+}
+
 impl InspectControl for std::time::Duration {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = self.as_millis() as i32;
@@ -166,7 +217,7 @@ macro_rules! inspector {
 				($(<$cmp as $crate::Inspect<'s>>::SystemData,)+),
 			);
 
-			#[cfg(features = "saveload")]
+			#[cfg(feature = "saveload")]
 			fn setup(&mut self, res: &mut ::amethyst::ecs::Resources) {
 				Self::SystemData::setup(res);
 				let mut state = res.fetch_mut::<$crate::InspectorState>();
@@ -234,7 +285,7 @@ macro_rules! inspector {
 											}
 										)+
 
-										#[cfg(features = "saveload")]
+										#[cfg(feature = "saveload")]
 										{
 											ui.separator();
 
@@ -255,7 +306,7 @@ macro_rules! inspector {
 									}
 								}
 
-								#[cfg(features = "saveload")]
+								#[cfg(feature = "saveload")]
 								{
 									let mut current = inspector_state.selected_prefab as i32;
 									let strings = inspector_state.prefabs.iter().map(|x| imgui::ImString::from(im_str!("{}", x))).collect::<Vec<_>>();
