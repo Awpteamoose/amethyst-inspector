@@ -80,13 +80,13 @@ fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &img
 	changed
 }
 
-impl InspectControl for amethyst::core::nalgebra::Vector2<f32> {
+impl InspectControl for amethyst::core::math::Vector2<f32> {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		vec_inspect(2, self.as_mut_slice(), null_to, speed, label, ui)
 	}
 }
 
-impl InspectControl for amethyst::core::nalgebra::Vector3<f32> {
+impl InspectControl for amethyst::core::math::Vector3<f32> {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		vec_inspect(3, self.as_mut_slice(), null_to, speed, label, ui)
 	}

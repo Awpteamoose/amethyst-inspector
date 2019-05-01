@@ -79,7 +79,7 @@ fn inspect(data: &Data, name: &Ident) -> TokenStream {
 						let me = if let Some(x) = storage.get(entity) { x } else { return; };
 						let mut new_me = me.clone();
 						let mut changed = false;
-						ui.push_id(::amethyst_imgui::imgui::im_str!("#name"));
+						ui.push_id(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
 
 						#(#recurse)*
 
