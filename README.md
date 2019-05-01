@@ -95,7 +95,6 @@ impl<'a> Inspect<'a> for Named {
 # Help wanted
 Drop me a line on discord or create an issue if you can help or have advice:
 
-* Derive macro for simple inspectors, also to replace `inspect_marker!`
 * Make a modal or smth specifying properties when adding components
 * Save/load entities
 	* somehow must be able to specify resource handles and whatnot

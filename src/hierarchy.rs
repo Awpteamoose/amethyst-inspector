@@ -31,7 +31,7 @@ impl InspectorHierarchy {
 				if ui.is_item_hovered_with_flags(imgui::ImGuiHoveredFlags::AllowWhenBlockedByActiveItem) {
 					self.hovering = Some(entity);
 
-					if ui.imgui().is_mouse_down(imgui::ImMouseButton::Left) && self.dragging.is_none() {
+					if ui.imgui().is_mouse_clicked(imgui::ImMouseButton::Left) && self.dragging.is_none() {
 						self.dragging = Some(entity);
 					}
 				}

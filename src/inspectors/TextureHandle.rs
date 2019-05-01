@@ -2,7 +2,7 @@ use amethyst::ecs::prelude::*;
 use amethyst_imgui::imgui;
 use crate::Inspect;
 
-pub type TextureList = std::collections::HashMap<&'static str, amethyst::renderer::TextureHandle>;
+pub type TextureList = std::collections::HashMap<String, amethyst::renderer::TextureHandle>;
 
 impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 	type SystemData = (
@@ -12,11 +12,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 	);
 
 	fn inspect((storage, texture_list, lazy): &Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
-		let me = if let Some(x) = storage.get(entity) {
-			x
-		} else {
-			return;
-		};
+		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
 
 		if !texture_list.is_empty() {
@@ -45,6 +41,6 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 
 	fn add((_, texture_list, lazy): &Self::SystemData, entity: Entity) {
 		// idk if I should insert UiTransform since idk if anything but the ui uses TextureHandle component
-		lazy.insert(entity, texture_list.values().nth(0).unwrap().clone());
+		lazy.insert(entity, texture_list.values().nth(0).unwrap_or_else(f!()).clone());
 	}
 }

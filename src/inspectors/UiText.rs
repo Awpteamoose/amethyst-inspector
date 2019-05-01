@@ -7,7 +7,7 @@ use amethyst::{
 use amethyst_imgui::imgui;
 use crate::Inspect;
 
-pub type FontList = std::collections::HashMap<&'static str, amethyst::ui::FontHandle>;
+pub type FontList = std::collections::HashMap<String, amethyst::ui::FontHandle>;
 
 impl<'a> Inspect<'a> for amethyst::ui::UiText {
 	type SystemData = (
@@ -112,7 +112,7 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 	}
 
 	fn add((_storage, transforms, loader, fonts, font_list, lazy): &Self::SystemData, entity: Entity) {
-		let font = if font_list.is_empty() { amethyst::ui::get_default_font(&loader, &fonts) } else { font_list.values().nth(0).unwrap().clone() };
+		let font = if font_list.is_empty() { amethyst::ui::get_default_font(&loader, &fonts) } else { font_list.values().nth(0).unwrap_or_else(f!()).clone() };
 		if !transforms.contains(entity) {
 			lazy.insert(entity, UiTransform::new(String::default(), amethyst::ui::Anchor::Middle, 0., 0., 0., 100., 100.));
 		}
