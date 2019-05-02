@@ -40,6 +40,7 @@ impl<'a> Inspect<'a> for Transform {
 			changed = rotation.control(0., 0.25, im_str!("rotation"), ui) || changed;
 			new_me.set_rotation_2d(rotation.to_radians());
 		}
+		ui.same_line(0.);
 		ui.checkbox(im_str!("radians"), &mut data.radians);
 
 		changed = new_me.scale_mut().control(1., 0.01, im_str!("scale"), ui) || changed;
