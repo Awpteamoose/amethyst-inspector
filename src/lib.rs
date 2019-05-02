@@ -189,11 +189,46 @@ macro_rules! inspect_default {
 	};
 }
 
-// TODO: renderer::Flipped
 inspect_marker!(amethyst::renderer::Hidden);
 inspect_marker!(amethyst::renderer::HiddenPropagate);
 inspect_marker!(amethyst::renderer::ScreenSpace);
 inspect_marker!(amethyst::renderer::Transparent);
+
+impl<'a> Inspect<'a> for amethyst::renderer::Flipped {
+	type SystemData = (ReadStorage<'a, Self>, Read<'a, LazyUpdate>);
+
+	const CAN_ADD: bool = true;
+
+	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+		use amethyst::renderer::Flipped;
+
+		let me = if let Some(x) = storage.get(entity) { *x } else { return; };
+
+		let mut current = 0;
+		let mut items = Vec::<imgui::ImString>::with_capacity(9);
+		let source = [
+			Flipped::None,
+			Flipped::Horizontal,
+			Flipped::Vertical,
+			Flipped::Both,
+		];
+		for (i, &item) in source.iter().enumerate() {
+			if item == me {
+				current = i as i32;
+			}
+			items.push(im_str!("{:?}", item).into());
+		}
+
+		ui.combo(im_str!("flip"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 4);
+
+		let new_me = source[current as usize];
+		if me != new_me {
+			lazy.insert(entity, new_me);
+		}
+	}
+
+	fn add((_, lazy): &mut Self::SystemData, entity: Entity) { lazy.insert(entity, amethyst::renderer::Flipped::None) }
+}
 
 #[macro_export]
 macro_rules! inspector {
