@@ -22,7 +22,7 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 	type SystemData = (
 		ReadStorage<'a, Self>,
 		ReadStorage<'a, UiTransform>,
-		ReadStorage<'a, Transform>,
+		ReadStorage<'a, Transform<f32>>,
 		ReadStorage<'a, amethyst::core::Parent>,
 		ReadExpect<'a, amethyst::core::ParentHierarchy>,
 		ReadExpect<'a, amethyst::renderer::ScreenDimensions>,
@@ -39,7 +39,7 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 			let camera = if let Some(x) = cameras.get(debug.camera) { x } else { return; };
 			let camera_transform = if let Some(x) = transforms.get(debug.camera) { x } else { return; };
 
-			let global_t = amethyst::core::GlobalTransform(camera_transform.matrix());
+			let matrix = camera_transform.matrix();
 			let x = transform.pixel_x();
 			let y = dimensions.height() - transform.pixel_y();
 			let z = transform.local_z;
@@ -47,10 +47,10 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 			let h = transform.height;
 
 			let mut points = [
-				camera.position_from_screen([x - w * 0.5, y - h * 0.5].into(), &global_t, dimensions),
-				camera.position_from_screen([x + w * 0.5, y - h * 0.5].into(), &global_t, dimensions),
-				camera.position_from_screen([x + w * 0.5, y + h * 0.5].into(), &global_t, dimensions),
-				camera.position_from_screen([x - w * 0.5, y + h * 0.5].into(), &global_t, dimensions),
+				camera.position_from_screen([x - w * 0.5, y - h * 0.5].into(), &matrix, dimensions),
+				camera.position_from_screen([x + w * 0.5, y - h * 0.5].into(), &matrix, dimensions),
+				camera.position_from_screen([x + w * 0.5, y + h * 0.5].into(), &matrix, dimensions),
+				camera.position_from_screen([x - w * 0.5, y + h * 0.5].into(), &matrix, dimensions),
 			];
 			for p in points.iter_mut() {
 				p[2] = z;
