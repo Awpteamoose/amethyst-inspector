@@ -1,13 +1,6 @@
-#![recursion_limit = "128"]
-
 extern crate proc_macro;
-#[macro_use]
-extern crate quote;
-#[macro_use]
-extern crate syn;
-
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned};
+use proc_quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{parse_macro_input, parse_quote, Data, DeriveInput, Fields, GenericParam, Generics, Index, Ident, DataStruct, Type};
 use darling::{FromField, FromDeriveInput};
