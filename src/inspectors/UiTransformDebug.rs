@@ -6,6 +6,7 @@ use amethyst::{
 };
 use amethyst_imgui::imgui;
 use crate::Inspect;
+use imgui::im_str;
 
 #[derive(Clone, PartialEq)]
 pub struct UiTransformDebug {
@@ -32,9 +33,9 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn setup((storage, ui_transforms, transforms, _, _, dimensions, _, cameras, entities, lazy): &mut Self::SystemData, inspectee: Entity) {
+	fn setup((storage, ui_transforms, transforms, _, _, dimensions, _, cameras, entities, lazy): &mut Self::SystemData, inspectee: Option<Entity>) {
 		for (debug, entity) in (&*storage, &*entities).join() {
-			if entity != inspectee && !debug.always { return; };
+			if Some(entity) != inspectee && !debug.always { return; };
 			let transform = if let Some(x) = ui_transforms.get(entity) { x } else { return; };
 			let camera = if let Some(x) = cameras.get(debug.camera) { x } else { return; };
 			let camera_transform = if let Some(x) = transforms.get(debug.camera) { x } else { return; };
@@ -70,6 +71,7 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 	fn inspect((storage, _, _, _, _, _, names, cameras, entities, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
+		ui.push_id(im_str!("ui_transform_debug"));
 
 		let camera_entities = (&*cameras, &*entities).join().map(|(_, e)| e).collect::<Vec<Entity>>();
 		if camera_entities.len() > 1 {
@@ -85,24 +87,25 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 				} else {
 					format!("Entity {}/{}", camera_entity.id(), camera_entity.gen().id())
 				};
-				items.push(imgui::im_str!("{}", label).into());
+				items.push(im_str!("{}", label).into());
 			}
 
-			ui.combo(imgui::im_str!("camera##ui_transform_debug{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+			ui.combo(im_str!("camera"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
 			new_me.camera = camera_entities[current as usize];
 		}
 
 		let mut v: [f32; 4] = new_me.color.into();
-		ui.drag_float4(imgui::im_str!("colour##ui_transform_debug{:?}", entity), &mut v)
+		ui.drag_float4(im_str!("colour"), &mut v)
 			.speed(0.005)
 			.build();
 		new_me.color = v.into();
-		ui.checkbox(imgui::im_str!("children##ui_transform_debug{:?}", entity), &mut new_me.children);
-		ui.checkbox(imgui::im_str!("always##ui_transform_debug{:?}", entity), &mut new_me.always);
+		ui.checkbox(im_str!("children"), &mut new_me.children);
+		ui.checkbox(im_str!("always"), &mut new_me.always);
 
 		if *me != new_me {
 			lazy.insert(entity, new_me);
 		}
+		ui.pop_id();
 	}
 
 	fn can_add((_, ui_transforms, _, _, _, _, _, cameras, entities, _): &mut Self::SystemData, entity: Entity) -> bool {

@@ -22,15 +22,17 @@ macro_rules! compare_fields {
 
 mod hierarchy;
 mod inspectors;
-pub mod utils;
+mod utils;
 
 pub use hierarchy::*;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
+/// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
 pub trait InspectControl {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
 }
 
+/// Draggable float
 impl InspectControl for f32 {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut changed = ui.drag_float(label, self).speed(speed).build();
@@ -43,6 +45,7 @@ impl InspectControl for f32 {
 	}
 }
 
+/// Draggable int
 impl InspectControl for i32 {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut changed = ui.drag_int(label, self).speed(speed).build();
@@ -55,10 +58,11 @@ impl InspectControl for i32 {
 	}
 }
 
+/// Draggable uint
 impl InspectControl for u32 {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = *self as i32;
-		let mut changed = ui.drag_int(label, &mut v).speed(speed).build();
+		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			*self = null_to as u32;
@@ -73,10 +77,11 @@ impl InspectControl for u32 {
 	}
 }
 
+/// Draggable uint
 impl InspectControl for usize {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = *self as i32;
-		let mut changed = ui.drag_int(label, &mut v).speed(speed).build();
+		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			*self = null_to as usize;
@@ -91,10 +96,11 @@ impl InspectControl for usize {
 	}
 }
 
+/// Draggable uint as milliseconds
 impl InspectControl for std::time::Duration {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = self.as_millis() as i32;
-		let mut changed = ui.drag_int(label, &mut v).speed(speed).build();
+		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
 			v = null_to as i32;
@@ -129,41 +135,55 @@ fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &img
 	changed
 }
 
+/// 2 draggable floats
 impl InspectControl for amethyst::core::math::Vector2<f32> {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		vec_inspect(2, self.as_mut_slice(), null_to, speed, label, ui)
 	}
 }
 
+/// 3 draggable floats
 impl InspectControl for amethyst::core::math::Vector3<f32> {
 	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		vec_inspect(3, self.as_mut_slice(), null_to, speed, label, ui)
 	}
 }
 
+/// This holds internal state of inspector
 #[derive(Default)]
 pub struct InspectorState {
-	pub selected_prefab: usize,
+	/// a list of options for the loading dropdown
 	pub prefabs: Vec<String>,
+	/// if `saveload` feature, is enabled clicking "laod" will add selected prefab here
 	pub to_load: Vec<String>,
+	/// if `saveload` feature, is enabled clicking "save" will add inspected entity here
 	pub to_save: Vec<(Entity, String)>,
 	pub selected: Option<Entity>,
+	#[doc(hidden)]
 	pub save_name: String,
+	#[doc(hidden)]
+	pub selected_prefab: usize,
 }
 
+/// Any component implementing Inspect and included in your `inspect!` will show up in the inspector
+/// Whether the component is addable is decided by either `CAN_ADD` or `can_add(...)`
 #[allow(unused_variables)]
 pub trait Inspect<'a>: Component {
 	type SystemData: SystemData<'a>;
+	/// Statically decide if this component is addable
 	const CAN_ADD: bool = false;
+	/// Statically decide if this component is removeable
 	const CAN_REMOVE: bool = true;
 
+	/// This method is only ran if the component contains the selected entity
 	fn inspect(data: &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {}
+	/// Dynamically decide if this component can be added (e.g. because it requires another component)
 	fn can_add(data: &mut Self::SystemData, entity: Entity) -> bool { false }
 	fn add(data: &mut Self::SystemData, entity: Entity) {}
-	fn setup(data: &mut Self::SystemData, entity: Entity) {}
+	/// This method is ran on all entities, even if none are selected
+	fn setup(data: &mut Self::SystemData, entity: Option<Entity>) {}
 }
 
-#[macro_export]
 macro_rules! inspect_marker {
 	($cmp: path) => {
 		impl<'a> $crate::Inspect<'a> for $cmp {
@@ -266,10 +286,9 @@ macro_rules! inspector {
 						ui.window(im_str!("Inspector"))
 							.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 							.build(move || {
+								$(<$cmp as Inspect>::setup(&mut [<data $cmp>], inspector_state.selected);)+
 								if let Some(entity) = inspector_state.selected {
 									if entities.is_alive(entity) {
-										$(<$cmp as Inspect>::setup(&mut [<data $cmp>], entity);)+
-
 										if ui.small_button(im_str!("make child##inspector{:?}", entity)) {
 											lazy.create_entity(&entities)
 												.with(amethyst::core::transform::Parent::new(entity))

@@ -6,7 +6,9 @@ use amethyst::{
 };
 use amethyst_imgui::imgui;
 use crate::Inspect;
+use imgui::im_str;
 
+/// Add this as a resource and insert your handles into it to get a dropdown for FontHandle selection
 pub type FontList = std::collections::HashMap<String, amethyst::ui::FontHandle>;
 
 impl<'a> Inspect<'a> for amethyst::ui::UiText {
@@ -24,10 +26,11 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 	fn inspect((storage, _, _, _, font_list, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
+		ui.push_id(im_str!("ui_text"));
 
 		{
 			let mut buf = imgui::ImString::new(me.text.clone());
-			ui.input_text(imgui::im_str!("text##ui_text{:?}", entity), &mut buf)
+			ui.input_text(im_str!("text"), &mut buf)
 				.resize_buffer(true)
 				.build();
 			new_me.text = buf.to_str().to_owned();
@@ -42,22 +45,22 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				if me.font == **font {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{}", key).into());
+				items.push(im_str!("{}", key).into());
 			}
 
-			ui.combo(imgui::im_str!("font##ui_text{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+			ui.combo(im_str!("font"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
 			new_me.font = list_vec[current as usize].1.clone();
 		}
 
-		ui.drag_float(imgui::im_str!("font size##ui_text{:?}", entity), &mut new_me.font_size)
+		ui.drag_float(im_str!("font size"), &mut new_me.font_size)
 			.speed(0.5)
 			.build();
 
-		ui.drag_float4(imgui::im_str!("colour##ui_text{:?}", entity), &mut new_me.color)
+		ui.drag_float4(im_str!("colour"), &mut new_me.color)
 			.speed(0.005)
 			.build();
 
-		ui.checkbox(imgui::im_str!("password##ui_text{:?}", entity), &mut new_me.password);
+		ui.checkbox(im_str!("password"), &mut new_me.password);
 
 		{
 			use amethyst::ui::LineMode;
@@ -72,10 +75,10 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				if *line_mode == me.line_mode {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{:?}", line_mode).into());
+				items.push(im_str!("{:?}", line_mode).into());
 			}
 
-			ui.combo(imgui::im_str!("line style##ui_text{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+			ui.combo(im_str!("line style"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
 			new_me.line_mode = line_modes[current as usize].clone();
 		}
 
@@ -99,16 +102,18 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				if *anchor == me.align {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{:?}", anchor).into());
+				items.push(im_str!("{:?}", anchor).into());
 			}
 
-			ui.combo(imgui::im_str!("align##ui_text{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+			ui.combo(im_str!("align"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
 			new_me.align = anchors[current as usize].clone();
 		}
 
 		if compare_fields!(me, new_me, text, font_size, color, password, line_mode, align) {
 			lazy.insert(entity, new_me);
 		}
+
+		ui.pop_id();
 	}
 
 	fn add((_storage, transforms, loader, fonts, font_list, lazy): &mut Self::SystemData, entity: Entity) {

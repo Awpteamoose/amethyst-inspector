@@ -1,5 +1,6 @@
 use amethyst::ecs::prelude::*;
 use amethyst_imgui::imgui;
+use imgui::im_str;
 
 #[derive(Default, Clone, Copy)]
 pub struct InspectorHierarchy {
@@ -36,15 +37,15 @@ impl InspectorHierarchy {
 					}
 				}
 				ui.same_line(0.);
-				if ui.small_button(imgui::im_str!("inspect##selector{:?}", entity)) {
+				if ui.small_button(im_str!("inspect##selector{:?}", entity)) {
 					inspector_state.selected = Some(entity);
 				}
 			};
 		}
 
 		let mut opened = false;
-		ui.tree_node(imgui::im_str!("{}##{:?}", label, entity))
-			.label(imgui::im_str!("{}", label))
+		ui.tree_node(im_str!("{}##{:?}", label, entity))
+			.label(im_str!("{}", label))
 			.selected(matches::matches!(inspector_state.selected, Some(x) if x == entity))
 			.leaf(children.is_empty())
 			.build(|| {
@@ -73,12 +74,12 @@ impl<'s> System<'s> for InspectorHierarchy {
 
 	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities, lazy): Self::SystemData) {
 		amethyst_imgui::with(move |ui| {
-			ui.window(imgui::im_str!("Hierarchy"))
+			ui.window(im_str!("Hierarchy"))
 				.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
 				.build(move || {
 					self.hovering = None;
 
-					if ui.small_button(imgui::im_str!("new entity##hierarchy")) {
+					if ui.small_button(im_str!("new entity##hierarchy")) {
 						lazy.create_entity(&entities).build();
 					}
 					ui.separator();

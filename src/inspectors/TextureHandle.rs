@@ -1,7 +1,9 @@
 use amethyst::ecs::prelude::*;
 use amethyst_imgui::imgui;
 use crate::Inspect;
+use imgui::im_str;
 
+/// Add this as a resource and insert your handles into it to get a dropdown for TextureHandle selection
 pub type TextureList = std::collections::HashMap<String, amethyst::renderer::TextureHandle>;
 
 impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
@@ -14,6 +16,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 	fn inspect((storage, texture_list, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
+		ui.push_id(im_str!("texture"));
 
 		if !texture_list.is_empty() {
 			let mut current = 0;
@@ -23,16 +26,17 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 				if new_me == **texture {
 					current = i as i32;
 				}
-				items.push(imgui::im_str!("{}", key).into());
+				items.push(im_str!("{}", key).into());
 			}
 
-			ui.combo(imgui::im_str!("texture##texture{:?}", entity), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+			ui.combo(im_str!("texture"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
 			new_me = list_vec[current as usize].1.clone();
 		}
 
 		if *me != new_me {
 			lazy.insert(entity, new_me);
 		}
+		ui.pop_id();
 	}
 
 	fn can_add((_, texture_list, _): &mut Self::SystemData, _: Entity) -> bool {

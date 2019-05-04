@@ -16,7 +16,7 @@ impl<'a> Inspect<'a> for UiTransform {
 		let me = if let Some(x) = storage.get(entity) { x } else { return; };
 		let mut new_me = me.clone();
 		let mut changed = false;
-		ui.push_id(im_str!("UiTransform##{:?}", entity));
+		ui.push_id(im_str!("ui_transform"));
 
 		{
 			let mut v: [f32; 3] = [me.local_x, me.local_y, me.local_z];
