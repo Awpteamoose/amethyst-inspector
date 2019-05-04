@@ -26,7 +26,7 @@ impl<'a> Inspect<'a> for Named {
 		ui.pop_id();
 	}
 
-	fn add((_storage, lazy): &mut Self::SystemData, entity: Entity) {
+	fn add((_, lazy): &mut Self::SystemData, entity: Entity) {
 		lazy.insert(entity, Named::new(format!("Entity {}/{}", entity.id(), entity.gen().id())));
 	}
 }
