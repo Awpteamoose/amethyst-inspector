@@ -44,9 +44,13 @@ impl InspectorHierarchy {
 		}
 
 		let mut opened = false;
-		ui.tree_node(im_str!("{}##{:?}", label, entity))
+		ui.tree_node(im_str!("{:?}", entity))
 			.label(im_str!("{}", label))
-			.selected(matches::matches!(inspector_state.selected, Some(x) if x == entity))
+			.allow_item_overlap(true)
+			.selected(
+				inspector_state.selected == Some(entity) ||
+				self.dragging == Some(entity)
+			)
 			.leaf(children.is_empty())
 			.build(|| {
 				opened = true;
@@ -96,7 +100,8 @@ impl<'s> System<'s> for InspectorHierarchy {
 									lazy.insert(dragged, amethyst::core::Parent::new(hover));
 								}
 							} else {
-								lazy.remove::<amethyst::core::Parent>(dragged);
+								// TODO: bugged in amethyst
+								// lazy.remove::<amethyst::core::Parent>(dragged);
 							}
 							self.dragging = None;
 						}
