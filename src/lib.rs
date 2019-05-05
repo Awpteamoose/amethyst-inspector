@@ -49,7 +49,7 @@ mod controls;
 pub use hierarchy::InspectorHierarchy;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
-pub trait InspectControlBuilder<'a, T: InspectControl<'a>> {
+pub trait InspectControlBuilder<'a, T: InspectControl<'a>>: Sized {
 	fn new(value: &'a mut T) -> Self;
 	fn data(self, data: &'a mut T::SystemData) -> Self { self }
 	fn label(self, label: &'a imgui::ImStr) -> Self { self }

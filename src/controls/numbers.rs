@@ -20,26 +20,15 @@ macro_rules! numbers {
 				fn new(value: &'a mut $type) -> Self {
 					Self { value, label: None, speed: 1., null_to: <$type as Default>::default(), changed: None }
 				}
-			}
-
-			impl<'a> Builder<'a> {
-				pub fn label(mut self, label: &'a imgui::ImStr) -> Self {
+				fn label(mut self, label: &'a imgui::ImStr) -> Self {
 					self.label = Some(label);
 					self
 				}
-				pub fn speed(mut self, speed: f32) -> Self {
-					self.speed = speed;
-					self
-				}
-				pub fn null_to(mut self, null_to: $type) -> Self {
-					self.null_to = null_to;
-					self
-				}
-				pub fn changed(mut self, changed: &'a mut bool) -> Self {
+				fn changed(mut self, changed: &'a mut bool) -> Self {
 					self.changed = Some(changed);
 					self
 				}
-				pub fn build(self) {
+				fn build(self) {
 					amethyst_imgui::with(|ui| {
 						let mut v = *self.value as _;
 						let mut changed = ui.[<drag_$kind>](self.label.unwrap(), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build();
@@ -50,6 +39,17 @@ macro_rules! numbers {
 						}
 						if let Some(x) = self.changed { *x = *x || changed };
 					});
+				}
+			}
+
+			impl<'a> Builder<'a> {
+				pub fn speed(mut self, speed: f32) -> Self {
+					self.speed = speed;
+					self
+				}
+				pub fn null_to(mut self, null_to: $type) -> Self {
+					self.null_to = null_to;
+					self
 				}
 			}
 		}
