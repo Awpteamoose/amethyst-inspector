@@ -68,44 +68,46 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 		}
 	}
 
-	fn inspect((storage, _, _, _, _, _, names, cameras, entities, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
-		let me = if let Some(x) = storage.get(entity) { x } else { return; };
-		let mut new_me = me.clone();
-		ui.push_id(im_str!("ui_transform_debug"));
+	fn inspect((storage, _, _, _, _, _, names, cameras, entities, lazy): &mut Self::SystemData, entity: Entity) {
+		amethyst_imgui::with(|ui| {
+			let me = if let Some(x) = storage.get(entity) { x } else { return; };
+			let mut new_me = me.clone();
+			ui.push_id(im_str!("ui_transform_debug"));
 
-		let camera_entities = (&*cameras, &*entities).join().map(|(_, e)| e).collect::<Vec<Entity>>();
-		if camera_entities.len() > 1 {
-			let mut current = 0;
-			let mut items = Vec::<imgui::ImString>::with_capacity(camera_entities.len());
-			for (i, &camera_entity) in camera_entities.iter().enumerate() {
-				if me.camera == camera_entity {
-					current = i as i32;
+			let camera_entities = (&*cameras, &*entities).join().map(|(_, e)| e).collect::<Vec<Entity>>();
+			if camera_entities.len() > 1 {
+				let mut current = 0;
+				let mut items = Vec::<imgui::ImString>::with_capacity(camera_entities.len());
+				for (i, &camera_entity) in camera_entities.iter().enumerate() {
+					if me.camera == camera_entity {
+						current = i as i32;
+					}
+
+					let label: String = if let Some(name) = names.get(camera_entity) {
+						name.name.to_string()
+					} else {
+						format!("Entity {}/{}", camera_entity.id(), camera_entity.gen().id())
+					};
+					items.push(im_str!("{}", label).into());
 				}
 
-				let label: String = if let Some(name) = names.get(camera_entity) {
-					name.name.to_string()
-				} else {
-					format!("Entity {}/{}", camera_entity.id(), camera_entity.gen().id())
-				};
-				items.push(im_str!("{}", label).into());
+				ui.combo(im_str!("camera"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				new_me.camera = camera_entities[current as usize];
 			}
 
-			ui.combo(im_str!("camera"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
-			new_me.camera = camera_entities[current as usize];
-		}
+			let mut v: [f32; 4] = new_me.color.into();
+			ui.drag_float4(im_str!("colour"), &mut v)
+				.speed(0.005)
+				.build();
+			new_me.color = v.into();
+			ui.checkbox(im_str!("children"), &mut new_me.children);
+			ui.checkbox(im_str!("always"), &mut new_me.always);
 
-		let mut v: [f32; 4] = new_me.color.into();
-		ui.drag_float4(im_str!("colour"), &mut v)
-			.speed(0.005)
-			.build();
-		new_me.color = v.into();
-		ui.checkbox(im_str!("children"), &mut new_me.children);
-		ui.checkbox(im_str!("always"), &mut new_me.always);
-
-		if *me != new_me {
-			lazy.insert(entity, new_me);
-		}
-		ui.pop_id();
+			if *me != new_me {
+				lazy.insert(entity, new_me);
+			}
+			ui.pop_id();
+		});
 	}
 
 	fn can_add((_, ui_transforms, _, _, _, _, _, cameras, entities, _): &mut Self::SystemData, entity: Entity) -> bool {

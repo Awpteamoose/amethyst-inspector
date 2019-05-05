@@ -13,30 +13,32 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 		Read<'a, LazyUpdate>,
 	);
 
-	fn inspect((storage, texture_list, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
-		let me = if let Some(x) = storage.get(entity) { x } else { return; };
-		let mut new_me = me.clone();
-		ui.push_id(im_str!("texture"));
+	fn inspect((storage, texture_list, lazy): &mut Self::SystemData, entity: Entity) {
+		amethyst_imgui::with(|ui| {
+			let me = if let Some(x) = storage.get(entity) { x } else { return; };
+			let mut new_me = me.clone();
+			ui.push_id(im_str!("texture"));
 
-		if !texture_list.is_empty() {
-			let mut current = 0;
-			let mut items = Vec::<imgui::ImString>::with_capacity(texture_list.len());
-			let list_vec = texture_list.iter().collect::<Vec<_>>();
-			for (i, (key, texture)) in list_vec.iter().enumerate() {
-				if new_me == **texture {
-					current = i as i32;
+			if !texture_list.is_empty() {
+				let mut current = 0;
+				let mut items = Vec::<imgui::ImString>::with_capacity(texture_list.len());
+				let list_vec = texture_list.iter().collect::<Vec<_>>();
+				for (i, (key, texture)) in list_vec.iter().enumerate() {
+					if new_me == **texture {
+						current = i as i32;
+					}
+					items.push(im_str!("{}", key).into());
 				}
-				items.push(im_str!("{}", key).into());
+
+				ui.combo(im_str!("texture"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				new_me = list_vec[current as usize].1.clone();
 			}
 
-			ui.combo(im_str!("texture"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
-			new_me = list_vec[current as usize].1.clone();
-		}
-
-		if *me != new_me {
-			lazy.insert(entity, new_me);
-		}
-		ui.pop_id();
+			if *me != new_me {
+				lazy.insert(entity, new_me);
+			}
+			ui.pop_id();
+		});
 	}
 
 	fn can_add((_, texture_list, _): &mut Self::SystemData, _: Entity) -> bool {

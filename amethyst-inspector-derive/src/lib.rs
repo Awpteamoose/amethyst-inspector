@@ -46,10 +46,9 @@ pub fn derive_inspect(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 				#extra_data
 			);
 
-			const CAN_ADD: bool = #can_add;
-
 			#inspect
 			fn add((lazy, ..): &mut Self::SystemData, entity: ::amethyst::ecs::Entity) { #add }
+			fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { #can_add }
 		}
 	};
 
@@ -66,12 +65,18 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let skip = args.skip.unwrap_or(false);
 						if skip { return quote!(); };
 
-						let null_to = args.null_to.map(|x| quote!(#x)).unwrap_or(quote!(0.));
-						let speed = args.speed.unwrap_or(0.1);
+						// TODO: more field attrs
+						let null_to = args.null_to.map(|x| quote!(.null_to(#x))).unwrap_or(quote!());
+						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 						let name = &f.ident;
 						let ty = &f.ty;
 						quote_spanned!{f.span()=>
-							changed = <#ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name, #null_to, #speed, ::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)), ui) || changed;
+							<#ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
+								.changed(&mut changed)
+								#null_to
+								#speed
+								.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
+								.build();
 						}
 					});
 					let extra_data = fields.named.iter().map(|f| {
@@ -92,18 +97,20 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						quote!{#varname, }
 					});
 					(quote! {
-						fn inspect((lazy, storage, #(#extra_data_members)*): &mut Self::SystemData, entity: ::amethyst::ecs::Entity, ui: &::amethyst_imgui::imgui::Ui<'_>) {
-							let me = if let Some(x) = storage.get(entity) { x } else { return; };
-							let mut new_me = me.clone();
-							let mut changed = false;
-							ui.push_id(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
+						fn inspect((lazy, storage, #(#extra_data_members)*): &mut Self::SystemData, entity: ::amethyst::ecs::Entity) {
+							::amethyst_imgui::with(|ui| {
+								let me = if let Some(x) = storage.get(entity) { x } else { return; };
+								let mut new_me = me.clone();
+								let mut changed = false;
+								ui.push_id(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
 
-							#(#inspect_fields)*
+								#(#inspect_fields)*
 
-							if changed {
-								lazy.insert(entity, new_me);
-							}
-							ui.pop_id();
+								if changed {
+									lazy.insert(entity, new_me);
+								}
+								ui.pop_id();
+							});
 						}
 					}, quote!{#(#extra_data)*})
 				}

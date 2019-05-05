@@ -1,1 +1,0 @@
-automod::dir!("src/inspectors");

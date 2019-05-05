@@ -6,12 +6,32 @@ macro_rules! f {
 	(_) => { |_| panic!("{}:{}", file!(), line!()) };
 }
 
-pub use amethyst;
-use amethyst::ecs::prelude::*;
-pub use amethyst_imgui;
-use amethyst_imgui::imgui::{self, im_str};
+#[macro_use]
+macro_rules! inspect_enum {
+	($current: expr, $label: expr, [$($variant:expr),+$(,)*]) => {{
+		let mut current = 0;
+		let source = vec![$($variant,)+];
+		let size = source.len();
+		let mut items = Vec::<imgui::ImString>::with_capacity(size);
+		for (i, &item) in source.iter().enumerate() {
+			if item == $current {
+				current = i as i32;
+			}
+			items.push(im_str!("{:?}", item).into());
+		}
+
+		amethyst_imgui::with(|ui| {
+			ui.combo($label, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), size as i32);
+		});
+
+		source[current as usize]
+	}};
+}
+
 pub use paste;
 pub use amethyst_inspector_derive::*;
+use amethyst::ecs::prelude::*;
+use amethyst_imgui::imgui::{self, im_str};
 
 #[macro_use]
 macro_rules! compare_fields {
@@ -20,92 +40,30 @@ macro_rules! compare_fields {
 	);
 }
 
+mod prelude;
 mod hierarchy;
 mod inspectors;
 mod utils;
+mod controls;
 
-pub use hierarchy::*;
+pub use hierarchy::InspectorHierarchy;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
+pub trait InspectControlBuilder<'a, T: InspectControl<'a>> {
+	fn new(value: &'a mut T) -> Self;
+}
+
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
-pub trait InspectControl<'a> {
+pub trait InspectControl<'a>: Sized + Send + Sync {
 	type SystemData: SystemData<'a>;
+	type Builder: InspectControlBuilder<'a, Self>;
 
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
-}
-
-/// Draggable float
-impl<'a> InspectControl<'a> for f32 {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut changed = ui.drag_float(label, self).speed(speed).build();
-		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-			changed = true;
-			*self = null_to;
-		}
-
-		changed
+	fn control(&'a mut self) -> Self::Builder {
+		Self::Builder::new(self)
 	}
 }
 
-/// Draggable int
-impl<'a> InspectControl<'a> for i32 {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut changed = ui.drag_int(label, self).speed(speed).build();
-		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-			changed = true;
-			*self = null_to as i32;
-		}
-
-		changed
-	}
-}
-
-/// Draggable uint
-impl<'a> InspectControl<'a> for u32 {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut v = *self as i32;
-		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
-		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-			changed = true;
-			*self = null_to as u32;
-		}
-
-		if v < 0 {
-			v = 0;
-		}
-		*self = v as u32;
-
-		changed
-	}
-}
-
-/// Draggable uint
-impl<'a> InspectControl<'a> for usize {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut v = *self as i32;
-		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
-		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-			changed = true;
-			*self = null_to as usize;
-		}
-
-		if v < 0 {
-			v = 0;
-		}
-		*self = v as usize;
-
-		changed
-	}
-}
-
+/*
 /// Draggable uint as milliseconds
 impl<'a> InspectControl<'a> for std::time::Duration {
 	type SystemData = ();
@@ -121,49 +79,7 @@ impl<'a> InspectControl<'a> for std::time::Duration {
 		changed
 	}
 }
-
-fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-	let mut changed = false;
-	ui.push_id(label);
-
-	let spacing = ui.imgui().style().item_inner_spacing.x;
-	let width = ((ui.get_window_size().0 - spacing * ((size - 1) as f32 * 1.5)) * 0.65) / size as f32;
-
-	for i in 0 .. size {
-		ui.with_id(i as i32, || {
-			ui.with_item_width(width, || {
-				changed = ui.drag_float(im_str!(""), &mut v[i as usize]).speed(speed).build() || changed;
-				if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-					changed = true;
-					v[i as usize] = null_to;
-				}
-				ui.same_line_spacing(0., spacing);
-			});
-		});
-	}
-
-	ui.text(label);
-	ui.pop_id();
-	changed
-}
-
-/// 2 draggable floats
-impl<'a> InspectControl<'a> for amethyst::core::math::Vector2<f32> {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		vec_inspect(2, self.as_mut_slice(), null_to, speed, label, ui)
-	}
-}
-
-/// 3 draggable floats
-impl<'a> InspectControl<'a> for amethyst::core::math::Vector3<f32> {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		vec_inspect(3, self.as_mut_slice(), null_to, speed, label, ui)
-	}
-}
+*/
 
 /// This holds internal state of inspector
 #[derive(Default)]
@@ -182,45 +98,41 @@ pub struct InspectorState {
 }
 
 /// Any component implementing Inspect and included in your `inspect!` will show up in the inspector
-/// Whether the component is addable is decided by either `CAN_ADD` or `can_add(...)`
+/// Whether the component is addable is decided by `can_add(...)`
 #[allow(unused_variables)]
 pub trait Inspect<'a>: Component {
 	type SystemData: SystemData<'a>;
-	/// Statically decide if this component is addable
-	const CAN_ADD: bool = false;
-	/// Statically decide if this component is removeable
-	const CAN_REMOVE: bool = true;
 
 	/// This method is only ran if the component contains the selected entity
-	fn inspect(data: &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {}
-	/// Dynamically decide if this component can be added (e.g. because it requires another component)
+	fn inspect(data: &mut Self::SystemData, entity: Entity) {}
+	/// Decide if this component can be added (e.g. because it requires another component)
 	fn can_add(data: &mut Self::SystemData, entity: Entity) -> bool { false }
+	/// Decide if this component can be removed (e.g. because it's required by another component)
+	fn can_remove(data: &mut Self::SystemData, entity: Entity) -> bool { true }
 	fn add(data: &mut Self::SystemData, entity: Entity) {}
 	/// This method is ran on all entities, even if none are selected
 	fn setup(data: &mut Self::SystemData, entity: Option<Entity>) {}
-}
-
-macro_rules! inspect_marker {
-	($cmp: path) => {
-		impl<'a> $crate::Inspect<'a> for $cmp {
-			type SystemData = $crate::amethyst::ecs::Read<'a, $crate::amethyst::ecs::LazyUpdate>;
-
-			const CAN_ADD: bool = true;
-
-			fn add(lazy: &mut Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self); }
-		}
-	};
 }
 
 #[macro_export]
 macro_rules! inspect_default {
 	($cmp: path) => {
 		impl<'a> $crate::Inspect<'a> for $cmp {
-			type SystemData = $crate::amethyst::ecs::Read<'a, $crate::amethyst::ecs::LazyUpdate>;
+			type SystemData = ::amethyst::ecs::Read<'a, ::amethyst::ecs::LazyUpdate>;
 
-			const CAN_ADD: bool = true;
+			fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
+			fn add(lazy: &mut Self::SystemData, entity: ::amethyst::ecs::Entity) { lazy.insert(entity, Self::default()); }
+		}
+	};
+}
 
-			fn add(lazy: &mut Self::SystemData, entity: $crate::amethyst::ecs::Entity) { lazy.insert(entity, Self::default()); }
+macro_rules! inspect_marker {
+	($cmp: path) => {
+		impl<'a> $crate::Inspect<'a> for $cmp {
+			type SystemData = ::amethyst::ecs::Read<'a, ::amethyst::ecs::LazyUpdate>;
+
+			fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
+			fn add(lazy: &mut Self::SystemData, entity: ::amethyst::ecs::Entity) { lazy.insert(entity, Self); }
 		}
 	};
 }
@@ -231,45 +143,32 @@ inspect_marker!(amethyst::renderer::ScreenSpace);
 inspect_marker!(amethyst::renderer::Transparent);
 
 impl<'a> Inspect<'a> for amethyst::renderer::Flipped {
-	type SystemData = (ReadStorage<'a, Self>, Read<'a, LazyUpdate>);
+	type SystemData = (Read<'a, LazyUpdate>, ReadStorage<'a, Self>);
 
-	const CAN_ADD: bool = true;
-
-	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity, ui: &imgui::Ui<'_>) {
+	fn inspect((lazy, storage): &mut Self::SystemData, entity: Entity) {
 		use amethyst::renderer::Flipped;
 
 		let me = if let Some(x) = storage.get(entity) { *x } else { return; };
-
-		let mut current = 0;
-		let mut items = Vec::<imgui::ImString>::with_capacity(9);
-		let source = [
+		let new_me = inspect_enum!(me, im_str!("flip"), [
 			Flipped::None,
 			Flipped::Horizontal,
 			Flipped::Vertical,
 			Flipped::Both,
-		];
-		for (i, &item) in source.iter().enumerate() {
-			if item == me {
-				current = i as i32;
-			}
-			items.push(im_str!("{:?}", item).into());
-		}
+		]);
 
-		ui.combo(im_str!("flip"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 4);
-
-		let new_me = source[current as usize];
 		if me != new_me {
 			lazy.insert(entity, new_me);
 		}
 	}
 
-	fn add((_, lazy): &mut Self::SystemData, entity: Entity) { lazy.insert(entity, amethyst::renderer::Flipped::None) }
+	fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
+	fn add((lazy, ..): &mut Self::SystemData, entity: Entity) { lazy.insert(entity, amethyst::renderer::Flipped::None) }
 }
 
 #[macro_export]
 macro_rules! inspector {
 	($($cmp:ident),+$(,)*) => {
-		use $crate::amethyst::{
+		use ::amethyst::{
 			prelude::*,
 			ecs::prelude::*,
 		};
@@ -295,7 +194,7 @@ macro_rules! inspector {
 
 			$crate::paste::item! {
 				fn run(&mut self, (mut inspector_state, lazy, entities, ($([<store $cmp>],)+), ($(mut [<data $cmp>],)+)): Self::SystemData) {
-					amethyst_imgui::with(move |ui| {
+					::amethyst_imgui::with(move |ui| {
 						use ::amethyst_imgui::imgui::{self, im_str};
 						use $crate::Inspect;
 
@@ -318,7 +217,7 @@ macro_rules! inspector {
 										if ui.collapsing_header(im_str!("add component")).build() {
 											let mut hor_pos = 0.;
 											$(
-												if (<$cmp as Inspect>::CAN_ADD || <$cmp as Inspect>::can_add(&mut [<data $cmp>], entity)) && ![<store $cmp>].contains(entity) {
+												if <$cmp as Inspect>::can_add(&mut [<data $cmp>], entity) && ![<store $cmp>].contains(entity) {
 													if ui.small_button(im_str!("{}", stringify!($cmp))) {
 														<$cmp as Inspect>::add(&mut [<data $cmp>], entity);
 													}
@@ -341,14 +240,14 @@ macro_rules! inspector {
 											if [<store $cmp>].contains(entity) {
 												let mut remove = false;
 												let expanded = ui.collapsing_header(im_str!("{}##header{:?}", stringify!($cmp), entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
-												if <$cmp as Inspect>::CAN_REMOVE {
+												if <$cmp as Inspect>::can_remove(&mut [<data $cmp>], entity) {
 													ui.same_line(0.);
 													remove = ui.small_button(im_str!("remove##{}_header_remove", stringify!($cmp)));
 												}
 												if remove {
 													lazy.remove::<$cmp>(entity);
 												} else if expanded {
-													<$cmp as Inspect>::inspect(&mut [<data $cmp>], entity, ui);
+													<$cmp as Inspect>::inspect(&mut [<data $cmp>], entity);
 												}
 											}
 										)+
