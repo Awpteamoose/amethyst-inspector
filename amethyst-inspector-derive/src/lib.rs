@@ -70,9 +70,12 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 						let name = &f.ident;
 						let ty = &f.ty;
+						let storage = format!("storage_{}", f.ident.as_ref().unwrap());
+						let varname = syn::Ident::new(&storage, f.span());
 						quote_spanned!{f.span()=>
 							<#ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
 								.changed(&mut changed)
+								.data(#varname)
 								#null_to
 								#speed
 								.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))

@@ -51,6 +51,10 @@ pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiTex
 
 pub trait InspectControlBuilder<'a, T: InspectControl<'a>> {
 	fn new(value: &'a mut T) -> Self;
+	fn data(self, data: &'a mut T::SystemData) -> Self { self }
+	fn label(self, label: &'a imgui::ImStr) -> Self { self }
+	fn build(self);
+	fn changed(self, changed: &'a mut bool) -> Self { self }
 }
 
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
