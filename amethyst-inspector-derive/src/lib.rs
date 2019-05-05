@@ -70,7 +70,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 						let name = &f.ident;
 						let ty = &f.ty;
-						let storage = format!("storage_{}", f.ident.as_ref().unwrap());
+						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
 						let varname = syn::Ident::new(&storage, f.span());
 						quote_spanned!{f.span()=>
 							<#ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
@@ -95,7 +95,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let skip = args.skip.unwrap_or(false);
 						if skip { return quote!() };
 
-						let storage = format!("storage_{}", f.ident.as_ref().unwrap());
+						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
 						let varname = syn::Ident::new(&storage, f.span());
 						quote!{#varname, }
 					});
