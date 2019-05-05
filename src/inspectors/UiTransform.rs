@@ -33,32 +33,29 @@ impl<'a> Inspect<'a> for UiTransform {
 				new_me.height = v[1];
 			}
 
-			{
-				use amethyst::ui::Anchor;
+			new_me.anchor = inspect_enum!(me.anchor, im_str!("anchor"), [
+				amethyst::ui::Anchor::TopLeft,
+				amethyst::ui::Anchor::TopMiddle,
+				amethyst::ui::Anchor::TopRight,
+				amethyst::ui::Anchor::MiddleLeft,
+				amethyst::ui::Anchor::Middle,
+				amethyst::ui::Anchor::MiddleRight,
+				amethyst::ui::Anchor::BottomLeft,
+				amethyst::ui::Anchor::BottomMiddle,
+				amethyst::ui::Anchor::BottomRight,
+			]);
 
-				let mut current = 0;
-				let mut items = Vec::<imgui::ImString>::with_capacity(9);
-				let anchors = [
-					Anchor::TopLeft,
-					Anchor::TopMiddle,
-					Anchor::TopRight,
-					Anchor::MiddleLeft,
-					Anchor::Middle,
-					Anchor::MiddleRight,
-					Anchor::BottomLeft,
-					Anchor::BottomMiddle,
-					Anchor::BottomRight,
-				];
-				for (i, anchor) in anchors.iter().enumerate() {
-					if *anchor == me.anchor {
-						current = i as i32;
-					}
-					items.push(im_str!("{:?}", anchor).into());
-				}
-
-				ui.combo(im_str!("anchor"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
-				new_me.anchor = anchors[current as usize].clone();
-			}
+			new_me.pivot = inspect_enum!(me.pivot, im_str!("pivot"), [
+				amethyst::ui::Anchor::TopLeft,
+				amethyst::ui::Anchor::TopMiddle,
+				amethyst::ui::Anchor::TopRight,
+				amethyst::ui::Anchor::MiddleLeft,
+				amethyst::ui::Anchor::Middle,
+				amethyst::ui::Anchor::MiddleRight,
+				amethyst::ui::Anchor::BottomLeft,
+				amethyst::ui::Anchor::BottomMiddle,
+				amethyst::ui::Anchor::BottomRight,
+			]);
 
 			{
 				let mut current = 0;
@@ -75,7 +72,7 @@ impl<'a> Inspect<'a> for UiTransform {
 				new_me.scale_mode = modes[current as usize].clone();
 			}
 
-			if changed || compare_fields!(me, new_me, anchor, scale_mode) {
+			if changed || compare_fields!(me, new_me, anchor, pivot, scale_mode) {
 				lazy.insert(entity, new_me);
 			}
 
@@ -84,6 +81,6 @@ impl<'a> Inspect<'a> for UiTransform {
 	}
 
 	fn add((_, lazy): &mut Self::SystemData, entity: Entity) {
-		lazy.insert(entity, UiTransform::new(String::default(), amethyst::ui::Anchor::Middle, 0., 0., 0., 100., 100.));
+		lazy.insert(entity, UiTransform::new(String::default(), amethyst::ui::Anchor::Middle, amethyst::ui::Anchor::Middle, 0., 0., 0., 100., 100.));
 	}
 }

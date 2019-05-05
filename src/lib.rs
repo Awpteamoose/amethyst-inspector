@@ -13,8 +13,8 @@ macro_rules! inspect_enum {
 		let source = vec![$($variant,)+];
 		let size = source.len();
 		let mut items = Vec::<imgui::ImString>::with_capacity(size);
-		for (i, &item) in source.iter().enumerate() {
-			if item == $current {
+		for (i, item) in source.iter().enumerate() {
+			if *item == $current {
 				current = i as i32;
 			}
 			items.push(im_str!("{:?}", item).into());
@@ -24,7 +24,7 @@ macro_rules! inspect_enum {
 			ui.combo($label, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), size as i32);
 		});
 
-		source[current as usize]
+		source[current as usize].clone()
 	}};
 }
 
