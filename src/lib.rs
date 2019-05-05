@@ -28,13 +28,17 @@ pub use hierarchy::*;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
-pub trait InspectControl {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
+pub trait InspectControl<'a> {
+	type SystemData: SystemData<'a>;
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool;
 }
 
 /// Draggable float
-impl InspectControl for f32 {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for f32 {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut changed = ui.drag_float(label, self).speed(speed).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
@@ -46,8 +50,10 @@ impl InspectControl for f32 {
 }
 
 /// Draggable int
-impl InspectControl for i32 {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for i32 {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut changed = ui.drag_int(label, self).speed(speed).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
 			changed = true;
@@ -59,8 +65,10 @@ impl InspectControl for i32 {
 }
 
 /// Draggable uint
-impl InspectControl for u32 {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for u32 {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = *self as i32;
 		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
@@ -78,8 +86,10 @@ impl InspectControl for u32 {
 }
 
 /// Draggable uint
-impl InspectControl for usize {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for usize {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = *self as i32;
 		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
@@ -97,8 +107,10 @@ impl InspectControl for usize {
 }
 
 /// Draggable uint as milliseconds
-impl InspectControl for std::time::Duration {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for std::time::Duration {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		let mut v = self.as_millis() as i32;
 		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
 		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
@@ -136,15 +148,19 @@ fn vec_inspect(size: usize, v: &mut [f32], null_to: f32, speed: f32, label: &img
 }
 
 /// 2 draggable floats
-impl InspectControl for amethyst::core::math::Vector2<f32> {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for amethyst::core::math::Vector2<f32> {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		vec_inspect(2, self.as_mut_slice(), null_to, speed, label, ui)
 	}
 }
 
 /// 3 draggable floats
-impl InspectControl for amethyst::core::math::Vector3<f32> {
-	fn control(&mut self, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+impl<'a> InspectControl<'a> for amethyst::core::math::Vector3<f32> {
+	type SystemData = ();
+
+	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
 		vec_inspect(3, self.as_mut_slice(), null_to, speed, label, ui)
 	}
 }
