@@ -13,8 +13,8 @@ macro_rules! inspect_enum {
 		let source = vec![$($variant,)+];
 		let size = source.len();
 		let mut items = Vec::<imgui::ImString>::with_capacity(size);
-		for (i, &item) in source.iter().enumerate() {
-			if item == $current {
+		for (i, item) in source.iter().enumerate() {
+			if *item == $current {
 				current = i as i32;
 			}
 			items.push(im_str!("{:?}", item).into());
@@ -24,7 +24,7 @@ macro_rules! inspect_enum {
 			ui.combo($label, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), size as i32);
 		});
 
-		source[current as usize]
+		source[current as usize].clone()
 	}};
 }
 
@@ -49,16 +49,20 @@ mod controls;
 pub use hierarchy::InspectorHierarchy;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
-pub trait InspectControlBuilder<'a, T: InspectControl<'a>> {
-	fn new(value: &'a mut T) -> Self;
+pub trait InspectControlBuilder<'control, 'resource: 'control, Value: InspectControl<'control, 'resource>>: Sized {
+	fn new(value: Value) -> Self;
+	fn data(self, data: &'control mut <Value as InspectControl<'control, 'resource>>::SystemData) -> Self { self }
+	fn label(self, label: &'control imgui::ImStr) -> Self { self }
+	fn build(self);
+	fn changed(self, changed: &'control mut bool) -> Self { self }
 }
 
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
-pub trait InspectControl<'a>: Sized + Send + Sync {
-	type SystemData: SystemData<'a>;
-	type Builder: InspectControlBuilder<'a, Self>;
+pub trait InspectControl<'control, 'resource: 'control>: Sized {
+	type SystemData: SystemData<'resource>;
+	type Builder: InspectControlBuilder<'control, 'resource, Self>;
 
-	fn control(&'a mut self) -> Self::Builder {
+	fn control(self) -> Self::Builder {
 		Self::Builder::new(self)
 	}
 }

@@ -9,24 +9,23 @@ use darling::{FromField, FromDeriveInput};
 #[darling(attributes(inspect))]
 struct StructArgs {
 	#[darling(default)]
-	no_default: Option<bool>,
+	no_default: bool,
 }
 
-#[derive(Debug, FromField)]
-#[darling(attributes(inspect))]
+#[derive(Debug, FromField, Default)]
+#[darling(attributes(inspect), default)]
 struct FieldArgs {
-	#[darling(default)]
 	null_to: Option<syn::Lit>,
-	#[darling(default)]
 	speed: Option<f32>,
-	#[darling(default)]
-	skip: Option<bool>,
+	skip: bool,
+	#[darling(multiple)]
+	with_component: Vec<syn::Path>,
 }
 
 #[proc_macro_derive(Inspect, attributes(inspect))]
 pub fn derive_inspect(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
-	let no_default = StructArgs::from_derive_input(&input).unwrap().no_default.unwrap_or(false);
+	let no_default = StructArgs::from_derive_input(&input).unwrap().no_default;
 
 	let name = input.ident;
 	let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -62,17 +61,26 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 				Fields::Named(ref fields) => {
 					let inspect_fields = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
-						let skip = args.skip.unwrap_or(false);
+						let skip = args.skip;
 						if skip { return quote!(); };
+
+						let name = &f.ident;
+						let ty = &f.ty;
+						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
+						let varname = syn::Ident::new(&storage, f.span());
+
+						if !args.with_component.is_empty() {
+							return with_component_body(f.ident.as_ref().unwrap(), varname, &args.with_component);
+						}
 
 						// TODO: more field attrs
 						let null_to = args.null_to.map(|x| quote!(.null_to(#x))).unwrap_or(quote!());
 						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
-						let name = &f.ident;
-						let ty = &f.ty;
-						quote_spanned!{f.span()=>
-							<#ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
+
+						quote!{
+							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
 								.changed(&mut changed)
+								.data(#varname)
 								#null_to
 								#speed
 								.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
@@ -81,18 +89,27 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 					});
 					let extra_data = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
-						let skip = args.skip.unwrap_or(false);
+						let skip = args.skip;
 						if skip { return quote!(); };
 
+						if !args.with_component.is_empty() {
+							let paths = args.with_component;
+							return quote!((
+								::amethyst::ecs::Entities<'a>,
+								ReadStorage<'a, ::amethyst::core::Named>,
+								#(ReadStorage<'a, #paths>,)*
+							),);
+						}
+
 						let ty = &f.ty;
-						quote!{ <#ty as ::amethyst_inspector::InspectControl<'a>>::SystemData, }
+						quote!{ <&'a mut #ty as ::amethyst_inspector::InspectControl<'a, 'a>>::SystemData, }
 					});
 					let extra_data_members = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
-						let skip = args.skip.unwrap_or(false);
+						let skip = args.skip;
 						if skip { return quote!() };
 
-						let storage = format!("storage_{}", f.ident.as_ref().unwrap());
+						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
 						let varname = syn::Ident::new(&storage, f.span());
 						quote!{#varname, }
 					});
@@ -120,4 +137,32 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 		},
 		_ => unimplemented!(),
 	}
+}
+
+fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::Path]) -> TokenStream {
+	let members: Vec<syn::Index> = components.iter().enumerate().map(|(i, _)| syn::Index::from(i + 2)).collect::<Vec<_>>();
+	quote! {{
+		use ::amethyst_imgui::imgui;
+
+		let data = #data;
+		let mut current = 0;
+		let list = ::std::iter::once(None).chain((&data.0, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
+		let mut items = Vec::<imgui::ImString>::new();
+		for (i, &entity) in list.iter().enumerate() {
+				if new_me.#name == entity { current = i as i32; }
+
+				let label: String = if let Some(entity) = entity {
+					if let Some(name) = data.1.get(entity) {
+						name.name.to_string()
+					} else {
+						format!("Entity {}/{}", entity.id(), entity.gen().id())
+					}
+				} else {
+					"None".into()
+				};
+				items.push(imgui::im_str!("{}", label).into());
+		}
+		changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+		new_me.#name = list[current as usize];
+	}}
 }
