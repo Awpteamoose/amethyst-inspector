@@ -3,28 +3,28 @@ macro_rules! numbers {
 		mod $type {
 			use crate::prelude::*;
 
-			impl<'a> InspectControl<'a> for $type {
+			impl<'small, 'big: 'small> InspectControl<'small, 'big> for &'small mut $type {
 				type SystemData = ();
-				type Builder = Builder<'a>;
+				type Builder = Builder<'small>;
 			}
 
-			pub struct Builder<'a> {
-				pub value: &'a mut $type,
-				pub label: Option<&'a imgui::ImStr>,
+			pub struct Builder<'small> {
+				pub value: &'small mut $type,
+				pub label: Option<&'small imgui::ImStr>,
 				pub speed: f32,
 				pub null_to: $type,
-				pub changed: Option<&'a mut bool>,
+				pub changed: Option<&'small mut bool>,
 			}
 
-			impl<'a> InspectControlBuilder<'a, $type> for Builder<'a> {
-				fn new(value: &'a mut $type) -> Self {
+			impl<'small, 'big: 'small> InspectControlBuilder<'small, 'big, &'small mut $type> for Builder<'small> {
+				fn new(value: &'small mut $type) -> Self {
 					Self { value, label: None, speed: 1., null_to: <$type as Default>::default(), changed: None }
 				}
-				fn label(mut self, label: &'a imgui::ImStr) -> Self {
+				fn label(mut self, label: &'small imgui::ImStr) -> Self {
 					self.label = Some(label);
 					self
 				}
-				fn changed(mut self, changed: &'a mut bool) -> Self {
+				fn changed(mut self, changed: &'small mut bool) -> Self {
 					self.changed = Some(changed);
 					self
 				}
@@ -42,7 +42,7 @@ macro_rules! numbers {
 				}
 			}
 
-			impl<'a> Builder<'a> {
+			impl<'small> Builder<'small> {
 				pub fn speed(mut self, speed: f32) -> Self {
 					self.speed = speed;
 					self

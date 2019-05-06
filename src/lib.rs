@@ -42,27 +42,27 @@ macro_rules! compare_fields {
 
 mod prelude;
 mod hierarchy;
-mod inspectors;
+// mod inspectors;
 mod utils;
 mod controls;
 
 pub use hierarchy::InspectorHierarchy;
-pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
+// pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
-pub trait InspectControlBuilder<'a, T: InspectControl<'a>>: Sized {
-	fn new(value: &'a mut T) -> Self;
-	fn data(self, data: &'a mut T::SystemData) -> Self { self }
-	fn label(self, label: &'a imgui::ImStr) -> Self { self }
+pub trait InspectControlBuilder<'small, 'big: 'small, Value: InspectControl<'small, 'big>>: Sized {
+	fn new(value: Value) -> Self;
+	fn data(self, data: &'small mut <Value as InspectControl<'small, 'big>>::SystemData) -> Self { self }
+	fn label(self, label: &'small imgui::ImStr) -> Self { self }
 	fn build(self);
-	fn changed(self, changed: &'a mut bool) -> Self { self }
+	fn changed(self, changed: &'small mut bool) -> Self { self }
 }
 
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
-pub trait InspectControl<'a>: Sized + Send + Sync {
-	type SystemData: SystemData<'a>;
-	type Builder: InspectControlBuilder<'a, Self>;
+pub trait InspectControl<'small, 'big: 'small>: Sized + Send + Sync + 'small {
+	type SystemData: SystemData<'big>;
+	type Builder: InspectControlBuilder<'small, 'big, Self>;
 
-	fn control(&'a mut self) -> Self::Builder {
+	fn control(self) -> Self::Builder {
 		Self::Builder::new(self)
 	}
 }
@@ -301,3 +301,222 @@ macro_rules! inspector {
 		}
 	};
 }
+
+#[derive(Clone, Default)]
+pub struct Player {
+	// #[inspect(skip)]
+	pub location: LocationEntity,
+	pub using_location: f32,
+	// pub normul: Normul,
+}
+
+impl Component for Player {
+	type Storage = DenseVecStorage<Self>;
+}
+
+#[derive(Default, Clone, PartialEq)]
+pub struct LocationEntity(pub Option<Entity>);
+
+impl<'small, 'big: 'small> InspectControl<'small, 'big> for &'small mut LocationEntity {
+	type SystemData = (
+		Entities<'big>,
+	);
+	type Builder = ThingBuilder<'small, 'big, Self>;
+}
+
+pub struct ThingBuilder<'small, 'big, Value: InspectControl<'small, 'big>> {
+	pub value: &'small mut LocationEntity,
+	pub label: Option<&'small imgui::ImStr>,
+	pub changed: Option<&'small mut bool>,
+	pub data: Option<&'small mut <Value as InspectControl<'small, 'big>>::SystemData>,
+}
+
+impl<'small, 'big: 'small> InspectControlBuilder<'small, 'big, &'small mut LocationEntity> for ThingBuilder<'small, 'big, &'small mut LocationEntity> {
+	fn new(value: &'small mut LocationEntity) -> Self {
+		Self { value, label: None, changed: None, data: None }
+	}
+	// fn label(mut self, label: &'a imgui::ImStr) -> Self {
+	//	   self.label = Some(label);
+	//	   self
+	// }
+	// fn changed(mut self, changed: &'a mut bool) -> Self {
+	//	   self.changed = Some(changed);
+	//	   self
+	// }
+	// fn data(mut self, data: &'a mut <LocationEntity as InspectControl<'a>>::SystemData) -> Self {
+	//	   self.data = Some(data);
+	//	   self
+	// }
+	fn build(self) {
+		amethyst_imgui::with(|ui| {
+			// let data = self.data.unwrap();
+			// let mut changed = false;
+			// let mut current = 0;
+			// let list = std::iter::once(None).chain((&data.0, &data.2).join().map(|x| Some(x.1))).collect::<Vec<_>>();
+			// let mut items = Vec::<imgui::ImString>::new();
+			// for (i, &entity) in list.iter().enumerate() {
+			//	   if *self.value == LocationEntity(entity) { current = i as i32; }
+
+			//	   let label: String = if let Some(entity) = entity {
+			//		   if let Some(name) = data.1.get(entity) {
+			//			   name.name.to_string()
+			//		   } else {
+			//			   format!("Entity {}/{}", entity.id(), entity.gen().id())
+			//		   }
+			//	   } else {
+			//		   "None".into()
+			//	   };
+			//	   items.push(imgui::im_str!("{}", label).into());
+			// }
+			// changed = ui.combo(imgui::im_str!("location"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+			// *self.value = LocationEntity(list[current as usize]);
+
+			// let mut v = *self.value as _;
+			// let mut changed = ui.[<drag_$kind>](self.label.unwrap(), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build();
+			// *self.value = v as _;
+			// if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			//	   changed = true;
+			//	   *self.value = self.null_to;
+			// }
+			// if let Some(x) = self.changed { *x = *x || changed };
+		});
+	}
+}
+
+impl<'a> Inspect<'a> for Player {
+	type SystemData = (
+		::amethyst::ecs::Read<'a, ::amethyst::ecs::LazyUpdate>,
+		::amethyst::ecs::ReadStorage<'a, Self>,
+		<&'a mut LocationEntity as InspectControl<'a, 'a>>::SystemData,
+		// <f32 as InspectControl<'a>>::SystemData,
+	);
+	fn inspect(
+		(lazy, storage, systemdata_location): &mut Self::SystemData,
+		entity: ::amethyst::ecs::Entity,
+	) {
+		::amethyst_imgui::with(|ui| {
+			let me = if let Some(x) = storage.get(entity) {
+				x
+			} else {
+				return;
+			};
+			let mut new_me = me.clone();
+			let mut changed = false;
+			ui.push_id(::amethyst_imgui::imgui::im_str!("{}", stringify!(Player)));
+			<&mut LocationEntity as InspectControl>::control(&mut new_me.location)
+				.changed(&mut changed)
+				.data(systemdata_location)
+				.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(location)))
+				.build();
+			// <f32 as InspectControl>::control(&mut new_me.using_location)
+			//     .changed(&mut changed)
+			//     .data(systemdata_using_location)
+			//     .label(::amethyst_imgui::imgui::im_str!(
+			//         "{}",
+			//         stringify!(using_location)
+			//     ))
+			//     .build();
+			if changed {
+				lazy.insert(entity, new_me);
+			}
+			ui.pop_id();
+		});
+	}
+	// fn add((lazy, ..): &mut Self::SystemData, entity: ::amethyst::ecs::Entity) {
+	//     lazy.insert(entity, Self::default());
+	// }
+	// fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool {
+	//     true
+	// }
+}
+
+// #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+// pub struct Normul;
+
+// impl<'a> amethyst_inspector::InspectControl<'a> for Normul {
+//	   type SystemData = (
+//		   r!(cmp::Player),
+//		   r!(cmp::Location),
+//		   r!(cmp::Named),
+//		   r!(res::Entities),
+//	   );
+
+//	   fn control(&mut self, _: f32, _: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
+//		   let me = if let Some(x) = storage.get(entity) { x } else { return; };
+//		   let mut new_me = me.clone();
+//		   let mut changed = false;
+//		   ui.push_id(im_str!("Player"));
+
+//		   {
+//			   let mut current = 0;
+//			   let list = std::iter::once(None).chain((&*location_s, &*entities).join().map(|x| Some(x.1))).collect::<Vec<_>>();
+//			   let mut items = Vec::<imgui::ImString>::new();
+//			   for (i, &entity) in list.iter().enumerate() {
+//				   if me.location == entity { current = i as i32; }
+
+//				   let label: String = if let Some(entity) = entity {
+//					   if let Some(name) = named_s.get(entity) {
+//						   name.name.to_string()
+//					   } else {
+//						   format!("Entity {}/{}", entity.id(), entity.gen().id())
+//					   }
+//				   } else {
+//					   "None".into()
+//				   };
+//				   items.push(imgui::im_str!("{}", label).into());
+//			   }
+//			   changed = ui.combo(imgui::im_str!("location"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+//			   new_me.location = list[current as usize];
+//		   }
+//	   }
+// }
+
+// impl<'a> Inspect<'a> for Player {
+//	   type SystemData = (
+//		   r!(LazyUpdate),
+//		   r!(cmp::Player),
+//		   r!(cmp::Location),
+//		   r!(cmp::Named),
+//		   r!(res::Entities),
+//	   );
+
+//	   fn can_add(_: &mut Self::SystemData, _: Entity) -> bool { true }
+//	   fn inspect((lazy, storage, location_s, named_s, entities): &mut Self::SystemData, entity: Entity) {
+//		   amethyst_imgui::with(|ui| {
+//			   let me = if let Some(x) = storage.get(entity) { x } else { return; };
+//			   let mut new_me = me.clone();
+//			   let mut changed = false;
+//			   ui.push_id(im_str!("Player"));
+
+//			   {
+//				   let mut current = 0;
+//				   let list = std::iter::once(None).chain((&*location_s, &*entities).join().map(|x| Some(x.1))).collect::<Vec<_>>();
+//				   let mut items = Vec::<imgui::ImString>::new();
+//				   for (i, &entity) in list.iter().enumerate() {
+//					   if me.location == entity { current = i as i32; }
+
+//					   let label: String = if let Some(entity) = entity {
+//						   if let Some(name) = named_s.get(entity) {
+//							   name.name.to_string()
+//						   } else {
+//							   format!("Entity {}/{}", entity.id(), entity.gen().id())
+//						   }
+//					   } else {
+//						   "None".into()
+//					   };
+//					   items.push(imgui::im_str!("{}", label).into());
+//				   }
+//				   changed = ui.combo(imgui::im_str!("location"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+//				   new_me.location = list[current as usize];
+//			   }
+
+//			   new_me.using_location.control().null_to(0.).speed(0.).label(im_str!("using_location")).changed(&mut changed).build();
+
+//			   if changed {
+//				   lazy.insert(entity, new_me);
+//			   }
+
+//			   ui.pop_id();
+//		   });
+//	   }
+// }
