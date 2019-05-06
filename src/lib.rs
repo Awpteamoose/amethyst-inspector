@@ -49,18 +49,18 @@ mod controls;
 pub use hierarchy::InspectorHierarchy;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
-pub trait InspectControlBuilder<'small, 'big: 'small, Value: InspectControl<'small, 'big>>: Sized {
+pub trait InspectControlBuilder<'control, 'resource: 'control, Value: InspectControl<'control, 'resource>>: Sized {
 	fn new(value: Value) -> Self;
-	fn data(self, data: &'small mut <Value as InspectControl<'small, 'big>>::SystemData) -> Self { self }
-	fn label(self, label: &'small imgui::ImStr) -> Self { self }
+	fn data(self, data: &'control mut <Value as InspectControl<'control, 'resource>>::SystemData) -> Self { self }
+	fn label(self, label: &'control imgui::ImStr) -> Self { self }
 	fn build(self);
-	fn changed(self, changed: &'small mut bool) -> Self { self }
+	fn changed(self, changed: &'control mut bool) -> Self { self }
 }
 
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
-pub trait InspectControl<'small, 'big: 'small>: Sized + Send + Sync + 'small {
-	type SystemData: SystemData<'big>;
-	type Builder: InspectControlBuilder<'small, 'big, Self>;
+pub trait InspectControl<'control, 'resource: 'control>: Sized + Send + Sync + 'control {
+	type SystemData: SystemData<'resource>;
+	type Builder: InspectControlBuilder<'control, 'resource, Self>;
 
 	fn control(self) -> Self::Builder {
 		Self::Builder::new(self)

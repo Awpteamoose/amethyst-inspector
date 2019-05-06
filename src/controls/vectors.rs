@@ -3,28 +3,28 @@ macro_rules! vectors {
 		mod [<$kind$type$size>] {
 			use crate::prelude::*;
 
-			impl<'small, 'big: 'small> InspectControl<'small, 'big> for &'small mut [<Vector$size>]<$type> {
+			impl<'control, 'resource: 'control> InspectControl<'control, 'resource> for &'control mut [<Vector$size>]<$type> {
 				type SystemData = ();
-				type Builder = Builder<'small>;
+				type Builder = Builder<'control>;
 			}
 
-			pub struct Builder<'small> {
-				pub value: &'small mut [<Vector$size>]<$type>,
-				pub label: Option<&'small imgui::ImStr>,
+			pub struct Builder<'control> {
+				pub value: &'control mut [<Vector$size>]<$type>,
+				pub label: Option<&'control imgui::ImStr>,
 				pub speed: f32,
 				pub null_to: $type,
-				pub changed: Option<&'small mut bool>,
+				pub changed: Option<&'control mut bool>,
 			}
 
-			impl<'small, 'big: 'small> InspectControlBuilder<'small, 'big, &'small mut [<Vector$size>]<$type>> for Builder<'small> {
-				fn new(value: &'small mut [<Vector$size>]<$type>) -> Self {
+			impl<'control, 'resource: 'control> InspectControlBuilder<'control, 'resource, &'control mut [<Vector$size>]<$type>> for Builder<'control> {
+				fn new(value: &'control mut [<Vector$size>]<$type>) -> Self {
 					Self { value, label: None, speed: 1., null_to: <$type as Default>::default(), changed: None }
 				}
-				fn label(mut self, label: &'small imgui::ImStr) -> Self {
+				fn label(mut self, label: &'control imgui::ImStr) -> Self {
 					self.label = Some(label);
 					self
 				}
-				fn changed(mut self, changed: &'small mut bool) -> Self {
+				fn changed(mut self, changed: &'control mut bool) -> Self {
 					self.changed = Some(changed);
 					self
 				}
@@ -59,7 +59,7 @@ macro_rules! vectors {
 				}
 			}
 
-			impl<'small> Builder<'small> {
+			impl<'control> Builder<'control> {
 				pub fn speed(mut self, speed: f32) -> Self {
 					self.speed = speed;
 					self
