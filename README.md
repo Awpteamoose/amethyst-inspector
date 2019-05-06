@@ -96,8 +96,7 @@ impl<'a> Inspect<'a> for Named {
 Drop me a line on discord or create an issue if you can help or have advice:
 
 * Make a modal or smth specifying properties when adding components
-* Save/load entities
-	* somehow must be able to specify resource handles and whatnot
-* idk maybe feature-gate some of the functionality if it's too involved for some usecases
+* documentation
+* tests or smth idk if applicable
 
 ![screenshot](https://raw.githubusercontent.com/awpteamoose/amethyst-inspector/master/screenshot.png)
