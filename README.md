@@ -1,3 +1,5 @@
+[![](https://img.shields.io/badge/docs-gh--pages-yellowgreen.svg)](https://awpteamoose.github.io/amethyst-inspector/amethyst_inspector/index.html)
+
 ## About:
 Unity-inspired entity hierarchy and component editor via [amethyst-imgui](https://github.com/Awpteamoose/amethyst-imgui)
 
