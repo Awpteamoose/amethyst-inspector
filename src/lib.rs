@@ -58,7 +58,7 @@ pub trait InspectControlBuilder<'control, 'resource: 'control, Value: InspectCon
 }
 
 /// Implement this on your fields to be able to `#[derive(Inspect)]` on your struct
-pub trait InspectControl<'control, 'resource: 'control>: Sized + Send + Sync + 'control {
+pub trait InspectControl<'control, 'resource: 'control>: Sized {
 	type SystemData: SystemData<'resource>;
 	type Builder: InspectControlBuilder<'control, 'resource, Self>;
 

@@ -5,6 +5,7 @@ pub struct TransformInspectorData {
 	radians: bool,
 }
 
+// TODO: realfield thing
 impl<'a> Inspect<'a> for Transform<f32> {
 	type SystemData = (
 		ReadStorage<'a, Self>,
@@ -48,6 +49,6 @@ impl<'a> Inspect<'a> for Transform<f32> {
 	}
 
 	fn add((_storage, lazy, _): &mut Self::SystemData, entity: Entity) {
-		lazy.insert(entity, Transform::<f32>::default());
+		lazy.insert(entity, Self::default());
 	}
 }

@@ -9,19 +9,15 @@ use darling::{FromField, FromDeriveInput};
 #[darling(attributes(inspect))]
 struct StructArgs {
 	#[darling(default)]
-	no_default: Option<bool>,
+	no_default: bool,
 }
 
-#[derive(Debug, FromField)]
-#[darling(attributes(inspect))]
+#[derive(Debug, FromField, Default)]
+#[darling(attributes(inspect), default)]
 struct FieldArgs {
-	#[darling(default)]
 	null_to: Option<syn::Lit>,
-	#[darling(default)]
 	speed: Option<f32>,
-	#[darling(default)]
-	skip: Option<bool>,
-	#[darling(default)]
+	skip: bool,
 	#[darling(multiple)]
 	with_component: Vec<syn::Path>,
 }
@@ -29,7 +25,7 @@ struct FieldArgs {
 #[proc_macro_derive(Inspect, attributes(inspect))]
 pub fn derive_inspect(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
-	let no_default = StructArgs::from_derive_input(&input).unwrap().no_default.unwrap_or(false);
+	let no_default = StructArgs::from_derive_input(&input).unwrap().no_default;
 
 	let name = input.ident;
 	let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -65,12 +61,9 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 				Fields::Named(ref fields) => {
 					let inspect_fields = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
-						let skip = args.skip.unwrap_or(false);
+						let skip = args.skip;
 						if skip { return quote!(); };
 
-						// TODO: more field attrs
-						let null_to = args.null_to.map(|x| quote!(.null_to(#x))).unwrap_or(quote!());
-						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 						let name = &f.ident;
 						let ty = &f.ty;
 						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
@@ -80,7 +73,11 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 							return with_component_body(f.ident.as_ref().unwrap(), varname);
 						}
 
-						quote_spanned!{f.span()=>
+						// TODO: more field attrs
+						let null_to = args.null_to.map(|x| quote!(.null_to(#x))).unwrap_or(quote!());
+						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
+
+						quote!{
 							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
 								.changed(&mut changed)
 								.data(#varname)
@@ -92,7 +89,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 					});
 					let extra_data = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
-						let skip = args.skip.unwrap_or(false);
+						let skip = args.skip;
 						if skip { return quote!(); };
 
 						if !args.with_component.is_empty() {
@@ -109,7 +106,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 					});
 					let extra_data_members = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
-						let skip = args.skip.unwrap_or(false);
+						let skip = args.skip;
 						if skip { return quote!() };
 
 						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
