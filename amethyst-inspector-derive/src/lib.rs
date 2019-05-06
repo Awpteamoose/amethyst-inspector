@@ -73,7 +73,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
 						let varname = syn::Ident::new(&storage, f.span());
 						quote_spanned!{f.span()=>
-							<#ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
+							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
 								.changed(&mut changed)
 								.data(#varname)
 								#null_to
@@ -88,7 +88,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						if skip { return quote!(); };
 
 						let ty = &f.ty;
-						quote!{ <#ty as ::amethyst_inspector::InspectControl<'a>>::SystemData, }
+						quote!{ <&'a mut #ty as ::amethyst_inspector::InspectControl<'a, 'a>>::SystemData, }
 					});
 					let extra_data_members = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
