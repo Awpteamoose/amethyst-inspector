@@ -21,6 +21,9 @@ struct FieldArgs {
 	speed: Option<f32>,
 	#[darling(default)]
 	skip: Option<bool>,
+	#[darling(default)]
+	#[darling(multiple)]
+	with_component: Vec<syn::Path>,
 }
 
 #[proc_macro_derive(Inspect, attributes(inspect))]
@@ -72,6 +75,11 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let ty = &f.ty;
 						let storage = format!("systemdata_{}", f.ident.as_ref().unwrap());
 						let varname = syn::Ident::new(&storage, f.span());
+
+						if !args.with_component.is_empty() {
+							return with_component_body(f.ident.as_ref().unwrap(), varname);
+						}
+
 						quote_spanned!{f.span()=>
 							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
 								.changed(&mut changed)
@@ -86,6 +94,15 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let args = FieldArgs::from_field(&f).unwrap();
 						let skip = args.skip.unwrap_or(false);
 						if skip { return quote!(); };
+
+						if !args.with_component.is_empty() {
+							let paths = args.with_component;
+							return quote!((
+								#(ReadStorage<'a, #paths>,)*
+								ReadStorage<'a, ::amethyst::core::Named>,
+								::amethyst::ecs::Entities<'a>,
+							),);
+						}
 
 						let ty = &f.ty;
 						quote!{ <&'a mut #ty as ::amethyst_inspector::InspectControl<'a, 'a>>::SystemData, }
@@ -123,4 +140,31 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 		},
 		_ => unimplemented!(),
 	}
+}
+
+fn with_component_body(name: &syn::Ident, data: syn::Ident) -> TokenStream {
+	quote! {{
+		use ::amethyst_imgui::imgui;
+
+		let data = #data;
+		let mut current = 0;
+		let list = ::std::iter::once(None).chain((&data.0, &data.2).join().map(|x| Some(x.1))).collect::<Vec<_>>();
+		let mut items = Vec::<imgui::ImString>::new();
+		for (i, &entity) in list.iter().enumerate() {
+				if new_me.#name == entity { current = i as i32; }
+
+				let label: String = if let Some(entity) = entity {
+					if let Some(name) = data.1.get(entity) {
+						name.name.to_string()
+					} else {
+						format!("Entity {}/{}", entity.id(), entity.gen().id())
+					}
+				} else {
+					"None".into()
+				};
+				items.push(imgui::im_str!("{}", label).into());
+		}
+		changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+		new_me.#name = list[current as usize];
+	}}
 }
