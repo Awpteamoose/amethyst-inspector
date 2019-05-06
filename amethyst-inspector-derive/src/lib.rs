@@ -140,7 +140,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 }
 
 fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::Path]) -> TokenStream {
-	let members: Vec<usize> = components.iter().enumerate().map(|(i, _)| i + 2).collect::<Vec<_>>();
+	let members: Vec<syn::Index> = components.iter().enumerate().map(|(i, _)| syn::Index::from(i + 2)).collect::<Vec<_>>();
 	quote! {{
 		use ::amethyst_imgui::imgui;
 
