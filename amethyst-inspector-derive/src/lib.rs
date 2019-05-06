@@ -70,7 +70,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let varname = syn::Ident::new(&storage, f.span());
 
 						if !args.with_component.is_empty() {
-							return with_component_body(f.ident.as_ref().unwrap(), varname);
+							return with_component_body(f.ident.as_ref().unwrap(), varname, &args.with_component);
 						}
 
 						// TODO: more field attrs
@@ -95,9 +95,9 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						if !args.with_component.is_empty() {
 							let paths = args.with_component;
 							return quote!((
-								#(ReadStorage<'a, #paths>,)*
-								ReadStorage<'a, ::amethyst::core::Named>,
 								::amethyst::ecs::Entities<'a>,
+								ReadStorage<'a, ::amethyst::core::Named>,
+								#(ReadStorage<'a, #paths>,)*
 							),);
 						}
 
@@ -139,13 +139,14 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 	}
 }
 
-fn with_component_body(name: &syn::Ident, data: syn::Ident) -> TokenStream {
+fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::Path]) -> TokenStream {
+	let members: Vec<usize> = components.iter().enumerate().map(|(i, _)| i + 2).collect::<Vec<_>>();
 	quote! {{
 		use ::amethyst_imgui::imgui;
 
 		let data = #data;
 		let mut current = 0;
-		let list = ::std::iter::once(None).chain((&data.0, &data.2).join().map(|x| Some(x.1))).collect::<Vec<_>>();
+		let list = ::std::iter::once(None).chain((&data.0, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
 		let mut items = Vec::<imgui::ImString>::new();
 		for (i, &entity) in list.iter().enumerate() {
 				if new_me.#name == entity { current = i as i32; }
