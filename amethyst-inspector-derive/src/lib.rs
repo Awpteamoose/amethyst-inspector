@@ -1,6 +1,6 @@
 extern crate proc_macro;
 use proc_macro2::TokenStream;
-use proc_quote::{quote, quote_spanned};
+use proc_quote::quote;
 use syn::spanned::Spanned;
 use syn::{parse_macro_input, Data, DeriveInput, Fields, Ident, DataStruct};
 use darling::{FromField, FromDeriveInput};
@@ -115,6 +115,8 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 					});
 					(quote! {
 						fn inspect((lazy, storage, #(#extra_data_members)*): &mut Self::SystemData, entity: ::amethyst::ecs::Entity) {
+							use ::amethyst_inspector::InspectControlBuilder;
+
 							::amethyst_imgui::with(|ui| {
 								let me = if let Some(x) = storage.get(entity) { x } else { return; };
 								let mut new_me = me.clone();

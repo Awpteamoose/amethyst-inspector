@@ -1,6 +1,4 @@
-use amethyst::ecs::prelude::*;
 use amethyst_imgui::imgui;
-use crate::Inspect;
 use imgui::im_str;
 
 pub(crate) fn nullable_float2(null_to: f32, speed: f32, label: &imgui::ImStr, v: &mut [f32; 2], ui: &imgui::Ui<'_>) -> bool {

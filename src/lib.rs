@@ -49,6 +49,7 @@ mod controls;
 pub use hierarchy::InspectorHierarchy;
 pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList, UiTransformDebug::UiTransformDebug};
 
+#[allow(unused_variables)]
 pub trait InspectControlBuilder<'control, 'resource: 'control, Value: InspectControl<'control, 'resource>>: Sized {
 	fn new(value: Value) -> Self;
 	fn data(self, data: &'control mut <Value as InspectControl<'control, 'resource>>::SystemData) -> Self { self }
