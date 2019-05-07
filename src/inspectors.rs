@@ -9,4 +9,5 @@ pub mod Transform;
 pub mod UiText;
 pub mod UiTransform;
 pub mod UiTransformDebug;
+#[cfg(saveload)]
 pub mod U64Marker;
