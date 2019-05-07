@@ -145,6 +145,8 @@ inspect_marker!(amethyst::renderer::Hidden);
 inspect_marker!(amethyst::renderer::HiddenPropagate);
 inspect_marker!(amethyst::renderer::ScreenSpace);
 inspect_marker!(amethyst::renderer::Transparent);
+#[cfg(saveload)]
+inspect_marker!(amethyst::core::ecs::saveload::U64Marker);
 
 impl<'a> Inspect<'a> for amethyst::renderer::Flipped {
 	type SystemData = (Read<'a, LazyUpdate>, ReadStorage<'a, Self>);
