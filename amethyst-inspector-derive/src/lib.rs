@@ -141,30 +141,36 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 	}
 }
 
+// TODO: maybe this can be a control-like trait instead of hamfisted any downcasting?
 fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::Path]) -> TokenStream {
 	let members: Vec<syn::Index> = components.iter().enumerate().map(|(i, _)| syn::Index::from(i + 2)).collect::<Vec<_>>();
 	quote! {{
+		use ::amethyst::ecs::Entity;
 		use ::amethyst_imgui::imgui;
+		use ::std::any::Any;
 
 		let data = #data;
-		let mut current = 0;
-		let list = ::std::iter::once(None).chain((&data.0, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
-		let mut items = Vec::<imgui::ImString>::new();
-		for (i, &entity) in list.iter().enumerate() {
-				if new_me.#name == entity { current = i as i32; }
+		if let Some(field) = Any::downcast_mut::<Option<Entity>>(&mut new_me.#name) {
+			let mut current = 0;
+			let list = ::std::iter::once(None).chain((&data.0, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
+			let mut items = Vec::<imgui::ImString>::new();
+			for (i, &entity) in list.iter().enumerate() {
+					if *field == entity { current = i as i32; }
 
-				let label: String = if let Some(entity) = entity {
-					if let Some(name) = data.1.get(entity) {
-						name.name.to_string()
+					let label: String = if let Some(entity) = entity {
+						if let Some(name) = data.1.get(entity) {
+							name.name.to_string()
+						} else {
+							format!("Entity {}/{}", entity.id(), entity.gen().id())
+						}
 					} else {
-						format!("Entity {}/{}", entity.id(), entity.gen().id())
-					}
-				} else {
-					"None".into()
-				};
-				items.push(imgui::im_str!("{}", label).into());
+						"None".into()
+					};
+					items.push(imgui::im_str!("{}", label).into());
+			}
+			changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+			*field = list[current as usize];
 		}
-		changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-		new_me.#name = list[current as usize];
+		// TODO: else Marker
 	}}
 }
