@@ -68,24 +68,6 @@ pub trait InspectControl<'control, 'resource: 'control>: Sized {
 	}
 }
 
-/*
-/// Draggable uint as milliseconds
-impl<'a> InspectControl<'a> for std::time::Duration {
-	type SystemData = ();
-
-	fn control(&mut self, data: &mut Self::SystemData, null_to: f32, speed: f32, label: &imgui::ImStr, ui: &imgui::Ui<'_>) -> bool {
-		let mut v = self.as_millis() as i32;
-		let mut changed = ui.drag_int(label, &mut v).speed(speed).min(0).build();
-		if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-			changed = true;
-			v = null_to as i32;
-		}
-		*self = std::time::Duration::from_millis(v as u64);
-		changed
-	}
-}
-*/
-
 /// This holds internal state of inspector
 #[derive(Default)]
 pub struct InspectorState {
