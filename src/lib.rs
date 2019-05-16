@@ -74,8 +74,10 @@ pub struct InspectorState {
 	/// a list of options for the loading dropdown
 	pub prefabs: Vec<String>,
 	/// if `saveload` feature, is enabled clicking "laod" will add selected prefab here
+	#[cfg(feature = "saveload")]
 	pub to_load: Vec<String>,
 	/// if `saveload` feature, is enabled clicking "save" will add inspected entity here
+	#[cfg(feature = "saveload")]
 	pub to_save: Vec<(Entity, String)>,
 	pub selected: Option<Entity>,
 	#[doc(hidden)]
@@ -128,8 +130,6 @@ inspect_marker!(amethyst::renderer::Hidden);
 inspect_marker!(amethyst::renderer::HiddenPropagate);
 inspect_marker!(amethyst::renderer::ScreenSpace);
 inspect_marker!(amethyst::renderer::Transparent);
-#[cfg(saveload)]
-inspect_marker!(amethyst::core::ecs::saveload::U64Marker);
 
 impl<'a> Inspect<'a> for amethyst::renderer::Flipped {
 	type SystemData = (Read<'a, LazyUpdate>, ReadStorage<'a, Self>);
@@ -152,6 +152,17 @@ impl<'a> Inspect<'a> for amethyst::renderer::Flipped {
 
 	fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
 	fn add((lazy, ..): &mut Self::SystemData, entity: Entity) { lazy.insert(entity, amethyst::renderer::Flipped::None) }
+}
+
+#[cfg(feature = "saveload")]
+impl<'a> Inspect<'a> for amethyst::core::ecs::saveload::U64Marker {
+	type SystemData = Read<'a, LazyUpdate>;
+
+	fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
+	fn add(lazy: &mut Self::SystemData, entity: Entity) { lazy.exec(move |w| {
+		use amethyst::core::ecs::saveload::{MarkerAllocator, U64MarkerAllocator};
+		w.write_resource::<U64MarkerAllocator>().mark(entity, &mut w.write_storage());
+	})}
 }
 
 #[macro_export]

@@ -23,7 +23,7 @@ impl<'a> Inspect<'a> for UiTransformDebug {
 	type SystemData = (
 		ReadStorage<'a, Self>,
 		ReadStorage<'a, UiTransform>,
-		ReadStorage<'a, Transform<f32>>,
+		ReadStorage<'a, Transform>,
 		ReadStorage<'a, amethyst::core::Parent>,
 		ReadExpect<'a, amethyst::core::ParentHierarchy>,
 		ReadExpect<'a, amethyst::renderer::ScreenDimensions>,
