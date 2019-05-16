@@ -10,6 +10,7 @@ Unity-inspired entity hierarchy and component editor via [amethyst-imgui](https:
 // #[inspect(no_default)] would disable adding this component
 pub struct Player {
 	// will only show a dropdown for entities with this component
+	// also works for non-option Entity (however that can't be defaulted), U64Marker, Option<U64Marker>
 	#[inspect(with_component = "cmp::Location")]
 	pub location: Option<Entity>,
 	// null_to is what the field is set to on right click
