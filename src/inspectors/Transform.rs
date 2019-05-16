@@ -6,7 +6,7 @@ pub struct TransformInspectorData {
 }
 
 // TODO: realfield thing
-impl<'a> Inspect<'a> for Transform<f32> {
+impl<'a> Inspect<'a> for Transform {
 	type SystemData = (
 		ReadStorage<'a, Self>,
 		Read<'a, LazyUpdate>,
