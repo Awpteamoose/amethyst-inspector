@@ -78,7 +78,8 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 
 						quote!{
-							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut new_me.#name)
+							let mut #name = me.#name.clone();
+							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut #name)
 								.changed(&mut changed)
 								.data(#varname)
 								#null_to
@@ -86,6 +87,11 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 								.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
 								.build();
 						}
+					});
+					let assign_fields = fields.named.iter().map(|f| {
+						if FieldArgs::from_field(&f).unwrap().skip { return quote!(); };
+						let name = &f.ident;
+						quote!{cmp.#name = #name;}
 					});
 					let extra_data = fields.named.iter().map(|f| {
 						let args = FieldArgs::from_field(&f).unwrap();
@@ -120,14 +126,17 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 
 							::amethyst_imgui::with(|ui| {
 								let me = if let Some(x) = storage.get(entity) { x } else { return; };
-								let mut new_me = me.clone();
 								let mut changed = false;
 								ui.push_id(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
 
 								#(#inspect_fields)*
 
 								if changed {
-									lazy.insert(entity, new_me);
+									lazy.exec(move |w| {
+										if let Some(mut cmp) = w.write_storage::<Self>().get_mut(entity) {
+											#(#assign_fields)*
+										}
+									});
 								}
 								ui.pop_id();
 							});
@@ -145,93 +154,96 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 // TODO: maybe this can be a control-like trait instead of hamfisted any downcasting?
 fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::Path]) -> TokenStream {
 	let members: Vec<syn::Index> = components.iter().enumerate().map(|(i, _)| syn::Index::from(i + 3)).collect::<Vec<_>>();
-	quote! {{
-		use ::amethyst::ecs::{Entity, saveload::{U64Marker as Marker, U64MarkerAllocator as MarkerAllocator}};
-		use ::amethyst_imgui::imgui;
-		use ::std::any::Any;
+	quote! {
+		let mut #name = me.#name.clone();
+		{
+			use ::amethyst::ecs::{Entity, saveload::{U64Marker as Marker, U64MarkerAllocator as MarkerAllocator}};
+			use ::amethyst_imgui::imgui;
+			use ::std::any::Any;
 
-		let data = #data;
-		let entities = &data.0;
-		let named_s = &data.1;
-		// TODO: less disgusting, saveload feature
-		if let Some(field) = Any::downcast_mut::<Option<Entity>>(&mut new_me.#name) {
-			let mut current = 0;
-			let list = ::std::iter::once(None).chain((entities, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
-			let mut items = Vec::<imgui::ImString>::new();
-			for (i, &entity) in list.iter().enumerate() {
-					if *field == entity { current = i as i32; }
+			let data = #data;
+			let entities = &data.0;
+			let named_s = &data.1;
+			// TODO: less disgusting, saveload feature
+			if let Some(field) = Any::downcast_mut::<Option<Entity>>(&mut #name) {
+				let mut current = 0;
+				let list = ::std::iter::once(None).chain((entities, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
+				let mut items = Vec::<imgui::ImString>::new();
+				for (i, &entity) in list.iter().enumerate() {
+						if *field == entity { current = i as i32; }
 
-					let label: String = if let Some(entity) = entity {
-						if let Some(name) = named_s.get(entity) {
+						let label: String = if let Some(entity) = entity {
+							if let Some(name) = named_s.get(entity) {
+								name.name.to_string()
+							} else {
+								format!("Entity {}/{}", entity.id(), entity.gen().id())
+							}
+						} else {
+							"None".into()
+						};
+						items.push(imgui::im_str!("{}", label).into());
+				}
+				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				*field = list[current as usize];
+			} else if let Some(field) = Any::downcast_mut::<Entity>(&mut #name) {
+				let mut current = 0;
+				let list = (entities, #(&data.#members,)*).join().map(|(entity, ..)| entity).collect::<Vec<_>>();
+				let mut items = Vec::<imgui::ImString>::new();
+				for (i, &entity) in list.iter().enumerate() {
+						if *field == entity { current = i as i32; }
+
+						let label: String = if let Some(name) = named_s.get(entity) {
 							name.name.to_string()
 						} else {
 							format!("Entity {}/{}", entity.id(), entity.gen().id())
+						};
+						items.push(imgui::im_str!("{}", label).into());
+				}
+				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				*field = list[current as usize];
+			} else if let Some(field) = Any::downcast_mut::<Option<Marker>>(&mut #name) {
+				let marker_s = &data.2;
+
+				let mut current = 0;
+				let list = ::std::iter::once(None).chain((entities, marker_s, #(&data.#members,)*).join().map(|(entity, marker, ..)| Some((entity, marker)))).collect::<Vec<_>>();
+				let mut items = Vec::<imgui::ImString>::new();
+				for (i, &item) in list.iter().enumerate() {
+						if let Some((entity, marker)) = item {
+							if *field == Some(*marker) { current = i as i32; }
 						}
-					} else {
-						"None".into()
-					};
-					items.push(imgui::im_str!("{}", label).into());
-			}
-			changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-			*field = list[current as usize];
-		} else if let Some(field) = Any::downcast_mut::<Entity>(&mut new_me.#name) {
-			let mut current = 0;
-			let list = (entities, #(&data.#members,)*).join().map(|(entity, ..)| entity).collect::<Vec<_>>();
-			let mut items = Vec::<imgui::ImString>::new();
-			for (i, &entity) in list.iter().enumerate() {
-					if *field == entity { current = i as i32; }
 
-					let label: String = if let Some(name) = named_s.get(entity) {
-						name.name.to_string()
-					} else {
-						format!("Entity {}/{}", entity.id(), entity.gen().id())
-					};
-					items.push(imgui::im_str!("{}", label).into());
-			}
-			changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-			*field = list[current as usize];
-		} else if let Some(field) = Any::downcast_mut::<Option<Marker>>(&mut new_me.#name) {
-			let marker_s = &data.2;
+						let label: String = if let Some((entity, marker)) = item {
+							if let Some(name) = named_s.get(entity) {
+								name.name.to_string()
+							} else {
+								format!("Entity {}/{}", entity.id(), entity.gen().id())
+							}
+						} else {
+							"None".into()
+						};
+						items.push(imgui::im_str!("{}", label).into());
+				}
+				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				*field = if let Some((entity, marker)) = list[current as usize] { Some(*marker) } else { None };
+			} else if let Some(field) = Any::downcast_mut::<Marker>(&mut #name) {
+				let marker_s = &data.2;
 
-			let mut current = 0;
-			let list = ::std::iter::once(None).chain((entities, marker_s, #(&data.#members,)*).join().map(|(entity, marker, ..)| Some((entity, marker)))).collect::<Vec<_>>();
-			let mut items = Vec::<imgui::ImString>::new();
-			for (i, &item) in list.iter().enumerate() {
-					if let Some((entity, marker)) = item {
-						if *field == Some(*marker) { current = i as i32; }
-					}
+				let mut current = 0;
+				let list = (entities, marker_s, #(&data.#members,)*).join().map(|(entity, marker, ..)| (entity, marker)).collect::<Vec<_>>();
+				let mut items = Vec::<imgui::ImString>::new();
+				for (i, &(entity, marker)) in list.iter().enumerate() {
+						if *field == *marker { current = i as i32; }
 
-					let label: String = if let Some((entity, marker)) = item {
-						if let Some(name) = named_s.get(entity) {
+						let label: String = if let Some(name) = named_s.get(entity) {
 							name.name.to_string()
 						} else {
 							format!("Entity {}/{}", entity.id(), entity.gen().id())
-						}
-					} else {
-						"None".into()
-					};
-					items.push(imgui::im_str!("{}", label).into());
+						};
+						items.push(imgui::im_str!("{}", label).into());
+				}
+				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				*field = *list[current as usize].1;
 			}
-			changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-			*field = if let Some((entity, marker)) = list[current as usize] { Some(*marker) } else { None };
-		} else if let Some(field) = Any::downcast_mut::<Marker>(&mut new_me.#name) {
-			let marker_s = &data.2;
-
-			let mut current = 0;
-			let list = (entities, marker_s, #(&data.#members,)*).join().map(|(entity, marker, ..)| (entity, marker)).collect::<Vec<_>>();
-			let mut items = Vec::<imgui::ImString>::new();
-			for (i, &(entity, marker)) in list.iter().enumerate() {
-					if *field == *marker { current = i as i32; }
-
-					let label: String = if let Some(name) = named_s.get(entity) {
-						name.name.to_string()
-					} else {
-						format!("Entity {}/{}", entity.id(), entity.gen().id())
-					};
-					items.push(imgui::im_str!("{}", label).into());
-			}
-			changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-			*field = *list[current as usize].1;
 		}
-	}}
+	}
 }
