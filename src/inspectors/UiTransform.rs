@@ -28,7 +28,7 @@ impl<'a> Inspect<'a> for UiTransform {
 
 			{
 				let mut v: [f32; 2] = [me.width, me.height];
-				changed = crate::utils::nullable_float2(if me.scale_mode == ScaleMode::Pixel { 100. } else { 0.1 }, if me.scale_mode == ScaleMode::Pixel { 1. } else { 0.001 }, im_str!("size"), &mut v, ui) || changed;
+				changed = crate::utils::nullable_float2(if me.scale_mode == ScaleMode::Pixel { 100. } else { 1. }, if me.scale_mode == ScaleMode::Pixel { 1. } else { 0.001 }, im_str!("size"), &mut v, ui) || changed;
 				new_me.width = v[0];
 				new_me.height = v[1];
 			}
