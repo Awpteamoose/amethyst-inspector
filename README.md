@@ -6,6 +6,16 @@ Unity-inspired entity hierarchy and component editor via [amethyst-imgui](https:
 ## Basic sage:
 1. `#[derive(Inspect)]` on all components that you want to show up in the inspector. For example:
 ```rust
+// InspectControl is a derive for drawing nested structs
+#[derive(Clone, InspectControl)]
+pub struct Movement {
+	// null_to is what the field is set to on right click
+	// speed is how fast the slider can be dragged
+	#[inspect(null_to = 10., speed = 0.1)]
+	pub speed: f32,
+	pub direction: Vector2<f32>,
+}
+
 #[derive(Component, Clone, Inspect)]
 // #[inspect(no_default)] would disable adding this component
 pub struct Player {
@@ -13,11 +23,7 @@ pub struct Player {
 	// also works for non-option Entity (however that can't be defaulted), U64Marker, Option<U64Marker>
 	#[inspect(with_component = "cmp::Location")]
 	pub location: Option<Entity>,
-	// null_to is what the field is set to on right click
-	// speed is how fast the slider can be dragged
-	#[inspect(null_to = 10., speed = 0.1)]
-	pub speed: f32,
-	pub direction: Vector2<f32>,
+	pub movement: Movement,
 	// similar to serde(skip) - don't create a control for this field
 	#[inspect(skip)]
 	pub schlonk: Schlonker,
