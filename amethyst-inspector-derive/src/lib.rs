@@ -84,7 +84,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 								.data(#varname)
 								#null_to
 								#speed
-								.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
+								.label(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
 								.build();
 						}
 					});
@@ -127,7 +127,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 							::amethyst_imgui::with(|ui| {
 								let me = if let Some(x) = storage.get(entity) { x } else { return; };
 								let mut changed = false;
-								ui.push_id(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
+								ui.push_id(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
 
 								#(#inspect_fields)*
 
@@ -183,7 +183,7 @@ fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::P
 						};
 						items.push(imgui::im_str!("{}", label).into());
 				}
-				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
 				*field = list[current as usize];
 			} else if let Some(field) = Any::downcast_mut::<Entity>(&mut #name) {
 				let mut current = 0;
@@ -197,9 +197,9 @@ fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::P
 						} else {
 							format!("Entity {}/{}", entity.id(), entity.gen().id())
 						};
-						items.push(imgui::im_str!("{}", label).into());
+						items.push(&imgui::im_str!("{}", label).into());
 				}
-				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
 				*field = list[current as usize];
 			} else if let Some(field) = Any::downcast_mut::<Option<Marker>>(&mut #name) {
 				let marker_s = &data.2;
@@ -223,7 +223,7 @@ fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::P
 						};
 						items.push(imgui::im_str!("{}", label).into());
 				}
-				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
 				*field = if let Some((entity, marker)) = list[current as usize] { Some(*marker) } else { None };
 			} else if let Some(field) = Any::downcast_mut::<Marker>(&mut #name) {
 				let marker_s = &data.2;
@@ -241,7 +241,7 @@ fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::P
 						};
 						items.push(imgui::im_str!("{}", label).into());
 				}
-				changed = ui.combo(imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
+				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
 				*field = *list[current as usize].1;
 			}
 		}
@@ -281,6 +281,7 @@ pub fn derive_inspect_control(input: proc_macro::TokenStream) -> proc_macro::Tok
 						if args.skip { return quote!(); };
 
 						let name = &f.ident;
+						let ty = &f.ty;
 
 						// TODO: entities/markers
 						// if !args.with_component.is_empty() {
@@ -291,14 +292,14 @@ pub fn derive_inspect_control(input: proc_macro::TokenStream) -> proc_macro::Tok
 						let null_to = args.null_to.map(|x| quote!(.null_to(#x))).unwrap_or(quote!());
 						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 
-						let index = syn::Index::from(i);
+						// let index = syn::Index::from(i);
 						quote! {
-							<&mut f32 as ::amethyst_inspector::InspectControl>::control(&mut self.value.#name)
+							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut self.value.#name)
 								.changed(&mut changed)
-								.data(&mut data.#index)
+								// .data(&mut data.#index)
 								#null_to
 								#speed
-								.label(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
+								.label(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
 								.build();
 						}
 					}).collect::<Vec<_>>()
@@ -308,7 +309,6 @@ pub fn derive_inspect_control(input: proc_macro::TokenStream) -> proc_macro::Tok
 		},
 		_ => unimplemented!(),
 	};
-
 
 	let builder = syn::Ident::new(&format!("{}ControlBuilder", name), name.span());
 	let expanded = quote! {
@@ -328,7 +328,7 @@ pub fn derive_inspect_control(input: proc_macro::TokenStream) -> proc_macro::Tok
 			fn new(value: &'control mut #name) -> Self {
 				Self { value, label: None, changed: None, data: None }
 			}
-			fn label(mut self, label: &'control imgui::ImStr) -> Self {
+			fn label(mut self, label: &'control ::amethyst_imgui::imgui::ImStr) -> Self {
 				self.label = Some(label);
 				self
 			}
@@ -345,7 +345,7 @@ pub fn derive_inspect_control(input: proc_macro::TokenStream) -> proc_macro::Tok
 				let mut data = self.data.take().unwrap();
 
 				::amethyst_imgui::with(|ui| {
-					ui.tree_node(::amethyst_imgui::imgui::im_str!("{}", stringify!(#name))).selected(true).build(|| {
+					ui.tree_node(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name))).selected(true).build(|| {
 						#(#control)*
 					});
 				});

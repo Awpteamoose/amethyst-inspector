@@ -34,8 +34,8 @@ macro_rules! vectors {
 						let label = self.label.unwrap();
 						ui.push_id(label);
 
-						let spacing = ui.imgui().style().item_inner_spacing.x;
-						let width = ((ui.get_window_size().0 - spacing * (($size - 1) as f32 * 1.5)) * 0.65) / $size as f32;
+						let spacing = ui.imgui().style().item_inner_spacing[0];
+						let width = ((ui.get_window_size()[0] - spacing * (($size - 1) as f32 * 1.5)) * 0.65) / $size as f32;
 
 						for i in 0 .. $size {
 							ui.with_id(i as i32, || {
@@ -47,7 +47,7 @@ macro_rules! vectors {
 										changed = true;
 										self.value[i as usize] = self.null_to;
 									}
-									ui.same_line_spacing(0., spacing);
+									ui.same_line_with_spacing(0., spacing);
 								});
 							});
 						}

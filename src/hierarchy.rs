@@ -37,15 +37,15 @@ impl InspectorHierarchy {
 					}
 				}
 				ui.same_line(0.);
-				if ui.small_button(im_str!("inspect##selector{:?}", entity)) {
+				if ui.small_button(&im_str!("inspect##selector{:?}", entity)) {
 					inspector_state.selected = Some(entity);
 				}
 			};
 		}
 
 		let mut opened = false;
-		ui.tree_node(im_str!("{:?}", entity))
-			.label(im_str!("{}", label))
+		ui.tree_node(&im_str!("{:?}", entity))
+			.label(&im_str!("{}", label))
 			.allow_item_overlap(true)
 			.selected(
 				inspector_state.selected == Some(entity) ||
@@ -78,12 +78,12 @@ impl<'s> System<'s> for InspectorHierarchy {
 
 	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities, lazy): Self::SystemData) {
 		amethyst_imgui::with(move |ui| {
-			ui.window(im_str!("Hierarchy"))
-				.size((300.0, 500.0), imgui::ImGuiCond::FirstUseEver)
+			ui.window(&im_str!("Hierarchy"))
+				.size([300.0, 500.0], imgui::ImGuiCond::FirstUseEver)
 				.build(move || {
 					self.hovering = None;
 
-					if ui.small_button(im_str!("new entity##hierarchy")) {
+					if ui.small_button(&im_str!("new entity##hierarchy")) {
 						lazy.create_entity(&entities).build();
 					}
 					ui.separator();

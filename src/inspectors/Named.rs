@@ -15,7 +15,7 @@ impl<'a> Inspect<'a> for Named {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut buf = imgui::ImString::new(me.name.clone());
 			ui.push_id(im_str!("named"));
-			ui.input_text(im_str!("Entity {}/{}", entity.id(), entity.gen().id()), &mut buf)
+			ui.input_text(&im_str!("Entity {}/{}", entity.id(), entity.gen().id()), &mut buf)
 				.resize_buffer(true)
 				.build();
 
