@@ -292,11 +292,11 @@ pub fn derive_inspect_control(input: proc_macro::TokenStream) -> proc_macro::Tok
 						let null_to = args.null_to.map(|x| quote!(.null_to(#x))).unwrap_or(quote!());
 						let speed = args.speed.map(|x| quote!(.speed(#x))).unwrap_or(quote!());
 
-						// let index = syn::Index::from(i);
+						let index = syn::Index::from(i);
 						quote! {
 							<&mut #ty as ::amethyst_inspector::InspectControl>::control(&mut self.value.#name)
 								.changed(&mut changed)
-								// .data(&mut data.#index)
+								.data(&mut data.#index)
 								#null_to
 								#speed
 								.label(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)))
