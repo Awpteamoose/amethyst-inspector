@@ -8,7 +8,7 @@ use crate::Inspect;
 use imgui::im_str;
 
 /// Add this as a resource and insert your handles into it to get a dropdown for SpriteSheetHandle selection
-pub type SpriteList = std::collections::HashMap<String, amethyst::renderer::SpriteSheetHandle>;
+pub type SpriteList = std::collections::HashMap<String, amethyst::assets::Handle<amethyst::renderer::SpriteSheet>>;
 
 impl<'a> Inspect<'a> for SpriteRender {
 	type SystemData = (

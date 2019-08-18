@@ -1,6 +1,5 @@
 use amethyst::{
 	ecs::prelude::*,
-	renderer::Rgba,
 	assets::AssetStorage,
 	ui::UiTransform,
 };
@@ -125,7 +124,7 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 		lazy.insert(entity, amethyst::ui::UiText::new(
 			font,
 			"Sample text".to_string(),
-			Rgba::white().into(),
+			[1., 1., 1., 1.],
 			30.,
 		));
 	}

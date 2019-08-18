@@ -48,6 +48,7 @@ mod controls;
 
 pub use hierarchy::InspectorHierarchy;
 // pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList};
+pub use inspectors::{SpriteRender::SpriteList, UiText::FontList};
 
 #[allow(unused_variables)]
 pub trait InspectControlBuilder<'control, 'resource: 'control, Value: InspectControl<'control, 'resource>>: Sized {
@@ -126,8 +127,8 @@ macro_rules! inspect_marker {
 	};
 }
 
-// inspect_marker!(amethyst::renderer::Hidden);
-// inspect_marker!(amethyst::renderer::HiddenPropagate);
+inspect_marker!(amethyst::core::Hidden);
+inspect_marker!(amethyst::core::HiddenPropagate);
 // inspect_marker!(amethyst::renderer::ScreenSpace);
 inspect_marker!(amethyst::renderer::Transparent);
 
