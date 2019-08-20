@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-amethyst = { git = "https://github.com/amethyst/amethyst.git", features = ["saveload", "vulkan", "nightly"] }
-amethyst-imgui = { path = "../amethyst-imgui" }
+amethyst = { git = "https://github.com/amethyst/amethyst.git", features = ["vulkan"] }
+amethyst-imgui = { git = "https://github.com/awpteamoose/amethyst-imgui", rev = "c98180efd97fa38f9b9fe79fb30b6afb1d118a04" }
 amethyst-inspector-derive = { path = "amethyst-inspector-derive" }
 matches = "0.1"
 paste = "0.1"
 specs-derive = "0.4"
 
 [features]
+default = ["saveload", "nightly"]
 saveload = ["amethyst/saveload"]
+nightly = ["amethyst/nightly"]

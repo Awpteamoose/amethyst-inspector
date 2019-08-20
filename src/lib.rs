@@ -47,7 +47,6 @@ mod utils;
 mod controls;
 
 pub use hierarchy::InspectorHierarchy;
-// pub use inspectors::{SpriteRender::SpriteList, TextureHandle::TextureList, UiText::FontList};
 pub use inspectors::{SpriteRender::SpriteList, UiText::FontList};
 
 #[allow(unused_variables)]
@@ -72,9 +71,10 @@ pub trait InspectControl<'control, 'resource: 'control>: Sized {
 /// This holds internal state of inspector
 #[derive(Default)]
 pub struct InspectorState {
+	pub prefab_folder: String,
 	/// a list of options for the loading dropdown
 	pub prefabs: Vec<String>,
-	/// if `saveload` feature, is enabled clicking "laod" will add selected prefab here
+	/// if `saveload` feature, is enabled clicking "load" will add selected prefab here
 	#[cfg(feature = "saveload")]
 	pub to_load: Vec<String>,
 	/// if `saveload` feature, is enabled clicking "save" will add inspected entity here
@@ -155,17 +155,6 @@ inspect_marker!(amethyst::renderer::Transparent);
 //     fn add((lazy, ..): &mut Self::SystemData, entity: Entity) { lazy.insert(entity, amethyst::renderer::Flipped::None) }
 // }
 
-#[cfg(feature = "saveload")]
-impl<'a> Inspect<'a> for amethyst::core::ecs::saveload::U64Marker {
-	type SystemData = Read<'a, LazyUpdate>;
-
-	fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
-	fn add(lazy: &mut Self::SystemData, entity: Entity) { lazy.exec(move |w| {
-		use amethyst::core::ecs::saveload::{MarkerAllocator, U64MarkerAllocator};
-		w.write_resource::<U64MarkerAllocator>().mark(entity, &mut w.write_storage());
-	})}
-}
-
 #[macro_export]
 macro_rules! inspector {
 	($($cmp:ident),+$(,)*) => {
@@ -177,6 +166,16 @@ macro_rules! inspector {
 		#[derive(Default)]
 		#[allow(missing_copy_implementations)]
 		pub struct Inspector;
+
+		impl Inspector {
+			fn set_prefab_folder(world: &mut ::amethyst::ecs::World, path: String) {
+				let mut state = world.fetch_mut::<$crate::InspectorState>();
+				// TODO: glob
+				state.prefabs = ::std::fs::read_dir(&path).unwrap().map(|x| x.unwrap().file_name().into_string().unwrap()).collect();
+				state.prefab_folder = path;
+			}
+		}
+
 		impl<'s> System<'s> for Inspector {
 			type SystemData = (
 				Write<'s, $crate::InspectorState>,
@@ -185,13 +184,6 @@ macro_rules! inspector {
 				($(ReadStorage<'s, $cmp>,)+),
 				($(<$cmp as $crate::Inspect<'s>>::SystemData,)+),
 			);
-
-			#[cfg(feature = "saveload")]
-			fn setup(&mut self, res: &mut ::amethyst::ecs::Resources) {
-				Self::SystemData::setup(res);
-				let mut state = res.fetch_mut::<$crate::InspectorState>();
-				state.prefabs = ::std::fs::read_dir("assets/prefabs").unwrap().map(|x| x.unwrap().file_name().into_string().unwrap()).collect();
-			}
 
 			$crate::paste::item! {
 				fn run(&mut self, (mut inspector_state, lazy, entities, ($([<store $cmp>],)+), ($(mut [<data $cmp>],)+)): Self::SystemData) {

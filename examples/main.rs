@@ -1,6 +1,6 @@
 use amethyst::{
 	prelude::*,
-	renderer::{bundle::RenderingBundle, types::DefaultBackend, RenderToWindow, Transparent, SpriteRender},
+	renderer::{bundle::RenderingBundle, types::DefaultBackend, RenderToWindow, Transparent, SpriteRender, resources::Tint},
 	utils::application_root_dir,
 	window::DisplayConfig,
 	core::{
@@ -12,11 +12,12 @@ use amethyst::{
 		},
 		Transform,
 		Named,
+		ecs::saveload::SimpleMarker as SimpleMarkerRaw,
 	},
 	ui::{UiTransform, UiText},
 };
+type SimpleMarker = SimpleMarkerRaw<()>;
 
-use amethyst_imgui::RenderImgui;
 use amethyst_inspector::{inspector, InspectControl, Inspect};
 
 type TextureList = std::collections::HashMap<String, amethyst::assets::Handle<amethyst::renderer::Texture>>;
@@ -25,35 +26,56 @@ type SpriteList = std::collections::HashMap<String, amethyst::assets::Handle<ame
 struct Example;
 impl SimpleState for Example {
 	fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
-		let StateData { mut world, .. } = data;
+		let StateData { world, .. } = data;
 
 		world.setup::<(
 			Read<'_, SpriteList>,
 			Read<'_, std::collections::HashMap<String, amethyst::ui::FontHandle>>,
 			Read<'_, TextureList>,
+			Read<'_, amethyst::core::ecs::saveload::SimpleMarkerAllocator<()>>,
 		)>();
 
-		let loader = world.read_resource::<amethyst::assets::Loader>();
-		// TODO: man it became hard to load texture from raw pixel data
-		let white = loader.load(
-			"white.jpg",
-			amethyst::renderer::ImageFormat::default(),
-			(),
-			&world.read_resource(),
-		);
-
-		let mut textures = world.write_resource::<TextureList>();
-		textures.insert("white 1px".to_owned(), white.clone());
-
-		let mut sprites = world.write_resource::<SpriteList>();
-		sprites.insert(
-			"white 1px".to_owned(),
-			world.read_resource::<amethyst::assets::Loader>().load_from_data(
-				amethyst::renderer::SpriteSheet { texture: white.clone(), sprites: vec![amethyst::renderer::sprite::Sprite::from_pixel_values(1, 1, 1, 1, 0, 0, [0., 0.], false, false)] },
+		{
+			let loader = world.read_resource::<amethyst::assets::Loader>();
+			// TODO: man it became hard to load texture from raw pixel data
+			let white = loader.load(
+				"white.jpg",
+				amethyst::renderer::ImageFormat::default(),
 				(),
-				&world.read_resource::<amethyst::assets::AssetStorage<amethyst::renderer::SpriteSheet>>(),
-			),
-		);
+				&world.read_resource(),
+			);
+
+			let mut textures = world.write_resource::<TextureList>();
+			textures.insert("white 1px".to_owned(), white.clone());
+
+			let mut sprites = world.write_resource::<SpriteList>();
+			sprites.insert(
+				"white 1px".to_owned(),
+				world.read_resource::<amethyst::assets::Loader>().load_from_data(
+					amethyst::renderer::SpriteSheet { texture: white.clone(), sprites: vec![amethyst::renderer::sprite::Sprite::from_pixel_values(1, 1, 1, 1, 0, 0, [0., 0.], false, false)] },
+					(),
+					&world.read_resource::<amethyst::assets::AssetStorage<amethyst::renderer::SpriteSheet>>(),
+				),
+			);
+		}
+
+		let white = world.read_resource::<TextureList>()["white 1px"].clone();
+		world
+			.create_entity()
+			.named("testttt")
+			.with(amethyst::ui::UiTransform::new(
+				String::default(),
+				amethyst::ui::Anchor::Middle,
+				amethyst::ui::Anchor::Middle,
+				0.,
+				0.,
+				0.,
+				200.,
+				50.,
+			))
+			// .with(amethyst::ui::UiImage::Texture(white))
+			.with(amethyst::ui::UiImage::SolidColor([1., 1., 1., 1.]))
+			.build();
 	}
 }
 
@@ -87,6 +109,7 @@ impl Component for Player {
 }
 
 inspector![
+	SimpleMarker,
 	Named,
 	Transform,
 	Player,
@@ -96,6 +119,7 @@ inspector![
 	SpriteRender,
 	Hidden,
 	HiddenPropagate,
+	Tint,
 ];
 
 fn main() -> amethyst::Result<()> {
@@ -112,7 +136,7 @@ fn main() -> amethyst::Result<()> {
 				)
 				.with_plugin(amethyst::renderer::plugins::RenderFlat2D::default())
 				.with_plugin(amethyst::ui::RenderUi::default())
-				.with_plugin(RenderImgui::default()),
+				.with_plugin(amethyst_imgui::RenderImgui::default()),
 		)?
 		.with(amethyst_inspector::InspectorHierarchy::default(), "", &[])
 		.with(Inspector, "", &[])
