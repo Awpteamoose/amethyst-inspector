@@ -31,7 +31,7 @@ macro_rules! inspect_enum {
 pub use paste;
 pub use amethyst_inspector_derive::*;
 use amethyst::ecs::prelude::*;
-use amethyst_imgui::imgui::{self, im_str};
+use amethyst_imgui::imgui;
 
 #[macro_use]
 macro_rules! compare_fields {
@@ -43,7 +43,6 @@ macro_rules! compare_fields {
 mod prelude;
 mod hierarchy;
 mod inspectors;
-mod utils;
 mod controls;
 
 pub use hierarchy::InspectorHierarchy;
@@ -192,7 +191,7 @@ macro_rules! inspector {
 						use $crate::Inspect;
 
 						ui.window(&im_str!("Inspector"))
-							.size([300.0, 500.0], imgui::ImGuiCond::FirstUseEver)
+							.size([300.0, 500.0], imgui::Condition::FirstUseEver)
 							.build(move || {
 								$(<$cmp as Inspect>::setup(&mut [<data $cmp>], inspector_state.selected);)+
 								if let Some(entity) = inspector_state.selected {
@@ -214,7 +213,7 @@ macro_rules! inspector {
 													if ui.small_button(&im_str!("{}", stringify!($cmp))) {
 														<$cmp as Inspect>::add(&mut [<data $cmp>], entity);
 													}
-													hor_pos += ui.get_item_rect_size()[0] + ui.imgui().style().item_spacing[0];
+													hor_pos += ui.get_item_rect_size()[0] + ui.clone_style().item_spacing[0];
 													if hor_pos + ui.get_item_rect_size()[0] < ui.get_content_region_avail()[0] {
 														ui.same_line(0.);
 													} else {

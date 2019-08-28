@@ -34,21 +34,21 @@ macro_rules! vectors {
 						let label = self.label.unwrap();
 						ui.push_id(label);
 
-						let spacing = ui.imgui().style().item_inner_spacing[0];
+						let spacing = ui.clone_style().item_inner_spacing[0];
 						let width = ((ui.get_window_size()[0] - spacing * (($size - 1) as f32 * 1.5)) * 0.65) / $size as f32;
 
 						for i in 0 .. $size {
 							ui.with_id(i as i32, || {
-								ui.with_item_width(width, || {
-									let mut v = self.value[i as usize] as _;
-									changed = ui.[<drag_$kind>](im_str!(""), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build() || changed;
-									self.value[i as usize] = v as _;
-									if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
-										changed = true;
-										self.value[i as usize] = self.null_to;
-									}
-									ui.same_line_with_spacing(0., spacing);
-								});
+								let token = ui.push_item_width(width);
+								let mut v = self.value[i as usize] as _;
+								changed = ui.[<drag_$kind>](im_str!(""), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build() || changed;
+								self.value[i as usize] = v as _;
+								if ui.is_item_hovered() && ui.is_mouse_down(imgui::MouseButton::Right) {
+									changed = true;
+									self.value[i as usize] = self.null_to;
+								}
+								ui.same_line_with_spacing(0., spacing);
+								drop(token);
 							});
 						}
 

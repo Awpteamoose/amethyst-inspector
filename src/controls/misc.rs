@@ -30,7 +30,7 @@ impl<'control, 'resource: 'control> InspectControlBuilder<'control, 'resource, &
 			let mut v = self.value.as_millis() as i32;
 			let mut changed = ui.drag_int(self.label.unwrap(), &mut v).speed(self.speed).min(0).build();
 			*self.value = std::time::Duration::from_millis(v as u64);
-			if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+			if ui.is_item_hovered() && ui.is_mouse_down(imgui::MouseButton::Right) {
 				changed = true;
 				*self.value = self.null_to;
 			}

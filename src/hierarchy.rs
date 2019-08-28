@@ -32,7 +32,7 @@ impl InspectorHierarchy {
 				if ui.is_item_hovered_with_flags(imgui::ImGuiHoveredFlags::AllowWhenBlockedByActiveItem) {
 					self.hovering = Some(entity);
 
-					if ui.imgui().is_mouse_clicked(imgui::ImMouseButton::Left) && self.dragging.is_none() {
+					if ui.is_mouse_clicked(imgui::MouseButton::Left) && self.dragging.is_none() {
 						self.dragging = Some(entity);
 					}
 				}
@@ -79,7 +79,7 @@ impl<'s> System<'s> for InspectorHierarchy {
 	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities, lazy): Self::SystemData) {
 		amethyst_imgui::with(move |ui| {
 			ui.window(&im_str!("Hierarchy"))
-				.size([300.0, 500.0], imgui::ImGuiCond::FirstUseEver)
+				.size([300.0, 500.0], imgui::Condition::FirstUseEver)
 				.build(move || {
 					self.hovering = None;
 
@@ -91,8 +91,8 @@ impl<'s> System<'s> for InspectorHierarchy {
 						self.render_boy(entity, &hierarchy, &names, &ui, &mut inspector_state, &entities, &lazy);
 					}
 
-					let is_dragging = ui.imgui().is_mouse_dragging(imgui::ImMouseButton::Left);
-					let is_mouse_down = ui.imgui().is_mouse_down(imgui::ImMouseButton::Left);
+					let is_dragging = ui.is_mouse_dragging(imgui::MouseButton::Left);
+					let is_mouse_down = ui.is_mouse_down(imgui::MouseButton::Left);
 					if let Some(dragged) = self.dragging {
 						if !is_dragging && !is_mouse_down {
 							if let Some(hover) = self.hovering {

@@ -33,7 +33,7 @@ macro_rules! numbers {
 						let mut v = *self.value as _;
 						let mut changed = ui.[<drag_$kind>](self.label.unwrap(), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build();
 						*self.value = v as _;
-						if ui.is_item_hovered() && ui.imgui().is_mouse_down(imgui::ImMouseButton::Right) {
+						if ui.is_item_hovered() && ui.is_mouse_down(imgui::MouseButton::Right) {
 							changed = true;
 							*self.value = self.null_to;
 						}
