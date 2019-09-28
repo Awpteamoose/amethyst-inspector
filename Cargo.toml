@@ -3,7 +3,7 @@ name = "amethyst-inspector"
 version = "0.1.0"
 edition = "2018"
 description = "unity-like inspector for amethyst"
-authors = ["Awpteamoose <cargo@awpteamoose.my.to>"]
+authors = ["Awpteamoose <awpteamoose@gmail.com>"]
 license = "CC0-1.0"
 
 [dependencies]
