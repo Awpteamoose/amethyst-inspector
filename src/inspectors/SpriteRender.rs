@@ -23,6 +23,7 @@ impl<'a> Inspect<'a> for SpriteRender {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
 			let id = ui.push_id(im_str!("sprite_render"));
+			let mut changed = false;
 
 			if !sprite_list.is_empty() {
 				let mut current = 0;
@@ -35,7 +36,7 @@ impl<'a> Inspect<'a> for SpriteRender {
 					items.push(im_str!("{}", key));
 				}
 
-				imgui::ComboBox::new(im_str!("sprite sheet")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
+				changed = imgui::ComboBox::new(im_str!("sprite sheet")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice()) || changed;
 				new_me.sprite_sheet = list_vec[current as usize].1.clone();
 				if new_me.sprite_sheet != me.sprite_sheet {
 					new_me.sprite_number = 0;
@@ -43,13 +44,13 @@ impl<'a> Inspect<'a> for SpriteRender {
 			}
 
 			let mut sprite_number = new_me.sprite_number as i32;
-			imgui::Slider::new(
+			changed = imgui::Slider::new(
 				im_str!("# sprite"),
 				0 ..= sprites.get(&new_me.sprite_sheet).unwrap_or_else(f!()).sprites.len() as i32 - 1,
-			).build(ui, &mut sprite_number);
+			).build(ui, &mut sprite_number) || changed;
 			new_me.sprite_number = sprite_number as usize;
 
-			if compare_fields!(me, new_me, sprite_number, sprite_sheet) {
+			if changed {
 				lazy.insert(entity, new_me);
 			}
 			id.pop(ui);

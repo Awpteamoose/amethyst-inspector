@@ -26,12 +26,13 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
 			let id = ui.push_id(im_str!("ui_text"));
+			let mut changed = false;
 
 			{
 				let mut buf = imgui::ImString::new(me.text.clone());
-				ui.input_text(im_str!("text"), &mut buf)
+				changed = ui.input_text(im_str!("text"), &mut buf)
 					.resize_buffer(true)
-					.build();
+					.build() || changed;
 				new_me.text = buf.to_str().to_owned();
 			}
 
@@ -51,15 +52,15 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				new_me.font = list_vec[current as usize].1.clone();
 			}
 
-			ui.drag_float(im_str!("font size"), &mut new_me.font_size)
+			changed = ui.drag_float(im_str!("font size"), &mut new_me.font_size)
 				.speed(0.5)
-				.build();
+				.build() || changed;
 
-			ui.drag_float4(im_str!("colour"), &mut new_me.color)
+			changed = ui.drag_float4(im_str!("colour"), &mut new_me.color)
 				.speed(0.005)
-				.build();
+				.build() || changed;
 
-			ui.checkbox(im_str!("password"), &mut new_me.password);
+			changed = ui.checkbox(im_str!("password"), &mut new_me.password) || changed;
 
 			{
 				use amethyst::ui::LineMode;
@@ -77,7 +78,7 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 					items.push(im_str!("{:?}", line_mode));
 				}
 
-				imgui::ComboBox::new(im_str!("line style")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
+				changed = imgui::ComboBox::new(im_str!("line style")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice()) || changed;
 				new_me.line_mode = line_modes[current as usize].clone();
 			}
 
@@ -104,11 +105,11 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 					items.push(im_str!("{:?}", anchor));
 				}
 
-				imgui::ComboBox::new(im_str!("align")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
+				changed = imgui::ComboBox::new(im_str!("align")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice()) || changed;
 				new_me.align = anchors[current as usize].clone();
 			}
 
-			if compare_fields!(me, new_me, text, font_size, color, password, line_mode, align) {
+			if changed {
 				lazy.insert(entity, new_me);
 			}
 

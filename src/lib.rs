@@ -8,7 +8,7 @@ macro_rules! f {
 
 #[macro_use]
 macro_rules! inspect_enum {
-	($current: expr, $label: expr, [$($variant:expr),+$(,)*]) => {{
+	($ui: expr, $current: expr, $label: expr, $changed: expr, [$($variant:expr),+$(,)*]) => {{
 		let mut current = 0;
 		let source = vec![$($variant,)+];
 		let size = source.len();
@@ -20,10 +20,8 @@ macro_rules! inspect_enum {
 			items.push(im_str!("{:?}", item).into());
 		}
 
-		amethyst_imgui::with(|ui| {
-			// TODO: regular combo
-			imgui::ComboBox::new($label).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
-		});
+		// TODO: regular combo
+		$changed = imgui::ComboBox::new($label).build_simple_string($ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice()) || $changed;
 
 		source[current as usize].clone()
 	}};
@@ -33,13 +31,6 @@ pub use paste;
 pub use amethyst_inspector_derive::*;
 use amethyst::ecs::prelude::*;
 use amethyst_imgui::imgui;
-
-#[macro_use]
-macro_rules! compare_fields {
-	($first:expr, $second:expr, $($field:ident),+$(,)*) => (
-		$($first.$field != $second.$field ||)+ false
-	);
-}
 
 mod prelude;
 mod hierarchy;

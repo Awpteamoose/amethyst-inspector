@@ -50,7 +50,7 @@ impl<'a> Inspect<'a> for UiTransform {
 				new_me.height = v[1];
 			}
 
-			new_me.anchor = inspect_enum!(me.anchor, im_str!("anchor"), [
+			new_me.anchor = inspect_enum!(ui, me.anchor, im_str!("anchor"), changed, [
 				amethyst::ui::Anchor::TopLeft,
 				amethyst::ui::Anchor::TopMiddle,
 				amethyst::ui::Anchor::TopRight,
@@ -62,7 +62,7 @@ impl<'a> Inspect<'a> for UiTransform {
 				amethyst::ui::Anchor::BottomRight,
 			]);
 
-			new_me.pivot = inspect_enum!(me.pivot, im_str!("pivot"), [
+			new_me.pivot = inspect_enum!(ui, me.pivot, im_str!("pivot"), changed, [
 				amethyst::ui::Anchor::TopLeft,
 				amethyst::ui::Anchor::TopMiddle,
 				amethyst::ui::Anchor::TopRight,
@@ -85,13 +85,13 @@ impl<'a> Inspect<'a> for UiTransform {
 					items.push(im_str!("{:?}", scale_mode));
 				}
 
-				imgui::ComboBox::new(im_str!("scale mode")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
+				changed = imgui::ComboBox::new(im_str!("scale mode")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice()) || changed;
 				new_me.scale_mode = modes[current as usize].clone();
 			}
 
 			id.pop(ui);
 
-			if changed || compare_fields!(me, new_me, anchor, pivot, scale_mode) {
+			if changed {
 				lazy.insert(entity, new_me);
 			}
 		});
