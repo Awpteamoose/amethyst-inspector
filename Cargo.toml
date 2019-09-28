@@ -15,4 +15,5 @@ paste = "0.1"
 specs-derive = "0.4"
 
 [features]
+default = ["amethyst/vulkan"]
 saveload = ["amethyst/saveload"]
