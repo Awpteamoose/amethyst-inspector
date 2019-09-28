@@ -17,7 +17,7 @@ impl<'a> Inspect<'a> for UiTransform {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
 			let mut changed = false;
-			ui.push_id(im_str!("ui_transform"));
+			let id = ui.push_id(im_str!("ui_transform"));
 
 			{
 				let mut v: Vector3<f32> = Vector3::new(me.local_x, me.local_y, me.local_z);
@@ -80,20 +80,20 @@ impl<'a> Inspect<'a> for UiTransform {
 				let modes = [ScaleMode::Pixel, ScaleMode::Percent];
 				for (i, scale_mode) in modes.iter().enumerate() {
 					if *scale_mode == me.scale_mode {
-						current = i as i32;
+						current = i;
 					}
 					items.push(im_str!("{:?}", scale_mode));
 				}
 
-				ui.combo(im_str!("scale mode"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				imgui::ComboBox::new(im_str!("scale mode")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
 				new_me.scale_mode = modes[current as usize].clone();
 			}
+
+			id.pop(ui);
 
 			if changed || compare_fields!(me, new_me, anchor, pivot, scale_mode) {
 				lazy.insert(entity, new_me);
 			}
-
-			ui.pop_id();
 		});
 	}
 

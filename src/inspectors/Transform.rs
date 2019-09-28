@@ -19,7 +19,7 @@ impl<'a> Inspect<'a> for Transform {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
 			let mut changed = false;
-			ui.push_id(im_str!("Transform"));
+			let id = ui.push_id(im_str!("Transform"));
 
 			new_me.translation_mut().control().null_to(0.).speed(0.05).label(im_str!("translation")).changed(&mut changed).build();
 
@@ -44,7 +44,7 @@ impl<'a> Inspect<'a> for Transform {
 				lazy.insert(entity, new_me);
 			}
 
-			ui.pop_id();
+			id.pop(ui);
 		});
 	}
 

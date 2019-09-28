@@ -127,7 +127,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 							::amethyst_imgui::with(|ui| {
 								let me = if let Some(x) = storage.get(entity) { x } else { return; };
 								let mut changed = false;
-								ui.push_id(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
+								let id = ui.push_id(&::amethyst_imgui::imgui::im_str!("{}", stringify!(#name)));
 
 								#(#inspect_fields)*
 
@@ -138,7 +138,7 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 										}
 									});
 								}
-								ui.pop_id();
+								id.pop(ui);
 							});
 						}
 					}, quote!{#(#extra_data)*})

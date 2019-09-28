@@ -32,28 +32,28 @@ macro_rules! vectors {
 					amethyst_imgui::with(|ui| {
 						let mut changed = false;
 						let label = self.label.unwrap();
-						ui.push_id(label);
+						let id = ui.push_id(label);
 
 						let spacing = ui.clone_style().item_inner_spacing[0];
-						let width = ((ui.get_window_size()[0] - spacing * (($size - 1) as f32 * 1.5)) * 0.65) / $size as f32;
+						let width = ((ui.window_size()[0] - spacing * (($size - 1) as f32 * 1.5)) * 0.65) / $size as f32;
 
 						for i in 0 .. $size {
-							ui.with_id(i as i32, || {
-								let token = ui.push_item_width(width);
-								let mut v = self.value[i as usize] as _;
-								changed = ui.[<drag_$kind>](im_str!(""), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build() || changed;
-								self.value[i as usize] = v as _;
-								if ui.is_item_hovered() && ui.is_mouse_down(imgui::MouseButton::Right) {
-									changed = true;
-									self.value[i as usize] = self.null_to;
-								}
-								ui.same_line_with_spacing(0., spacing);
-								drop(token);
-							});
+							let inner_id = ui.push_id(i as i32);
+							let token = ui.push_item_width(width);
+							let mut v = self.value[i as usize] as _;
+							changed = ui.[<drag_$kind>](im_str!(""), &mut v).speed(self.speed).min(std::$type::MIN as _).max(std::$type::MAX as _).build() || changed;
+							self.value[i as usize] = v as _;
+							if ui.is_item_hovered() && ui.is_mouse_down(imgui::MouseButton::Right) {
+								changed = true;
+								self.value[i as usize] = self.null_to;
+							}
+							ui.same_line_with_spacing(0., spacing);
+							drop(token);
+							inner_id.pop(ui);
 						}
 
 						ui.text(label);
-						ui.pop_id();
+						id.pop(ui);
 						if let Some(x) = self.changed { *x = *x || changed };
 					});
 				}

@@ -22,7 +22,7 @@ impl<'a> Inspect<'a> for SpriteRender {
 		amethyst_imgui::with(|ui| {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
-			ui.push_id(im_str!("sprite_render"));
+			let id = ui.push_id(im_str!("sprite_render"));
 
 			if !sprite_list.is_empty() {
 				let mut current = 0;
@@ -30,12 +30,12 @@ impl<'a> Inspect<'a> for SpriteRender {
 				let list_vec = sprite_list.iter().collect::<Vec<_>>();
 				for (i, (key, sprite_sheet)) in list_vec.iter().enumerate() {
 					if me.sprite_sheet == **sprite_sheet {
-						current = i as i32;
+						current = i;
 					}
-					items.push(im_str!("{}", key).into());
+					items.push(im_str!("{}", key));
 				}
 
-				ui.combo(im_str!("sprite sheet"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				imgui::ComboBox::new(im_str!("sprite sheet")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
 				new_me.sprite_sheet = list_vec[current as usize].1.clone();
 				if new_me.sprite_sheet != me.sprite_sheet {
 					new_me.sprite_number = 0;
@@ -43,19 +43,16 @@ impl<'a> Inspect<'a> for SpriteRender {
 			}
 
 			let mut sprite_number = new_me.sprite_number as i32;
-			ui.slider_int(
+			imgui::Slider::new(
 				im_str!("# sprite"),
-				&mut sprite_number,
-				0,
-				sprites.get(&new_me.sprite_sheet).unwrap_or_else(f!()).sprites.len() as i32 - 1,
-			)
-			.build();
+				0 ..= sprites.get(&new_me.sprite_sheet).unwrap_or_else(f!()).sprites.len() as i32 - 1,
+			).build(ui, &mut sprite_number);
 			new_me.sprite_number = sprite_number as usize;
 
 			if compare_fields!(me, new_me, sprite_number, sprite_sheet) {
 				lazy.insert(entity, new_me);
 			}
-			ui.pop_id();
+			id.pop(ui);
 		});
 	}
 

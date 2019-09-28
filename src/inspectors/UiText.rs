@@ -25,7 +25,7 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 		amethyst_imgui::with(|ui| {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
-			ui.push_id(im_str!("ui_text"));
+			let id = ui.push_id(im_str!("ui_text"));
 
 			{
 				let mut buf = imgui::ImString::new(me.text.clone());
@@ -42,12 +42,12 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				let list_vec = font_list.iter().collect::<Vec<_>>();
 				for (i, (key, font)) in list_vec.iter().enumerate() {
 					if me.font == **font {
-						current = i as i32;
+						current = i;
 					}
-					items.push(im_str!("{}", key).into());
+					items.push(im_str!("{}", key));
 				}
 
-				ui.combo(im_str!("font"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				imgui::ComboBox::new(im_str!("font")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
 				new_me.font = list_vec[current as usize].1.clone();
 			}
 
@@ -72,12 +72,12 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				];
 				for (i, line_mode) in line_modes.iter().enumerate() {
 					if *line_mode == me.line_mode {
-						current = i as i32;
+						current = i;
 					}
-					items.push(im_str!("{:?}", line_mode).into());
+					items.push(im_str!("{:?}", line_mode));
 				}
 
-				ui.combo(im_str!("line style"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				imgui::ComboBox::new(im_str!("line style")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
 				new_me.line_mode = line_modes[current as usize].clone();
 			}
 
@@ -99,12 +99,12 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				];
 				for (i, anchor) in anchors.iter().enumerate() {
 					if *anchor == me.align {
-						current = i as i32;
+						current = i;
 					}
-					items.push(im_str!("{:?}", anchor).into());
+					items.push(im_str!("{:?}", anchor));
 				}
 
-				ui.combo(im_str!("align"), &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10);
+				imgui::ComboBox::new(im_str!("align")).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
 				new_me.align = anchors[current as usize].clone();
 			}
 
@@ -112,7 +112,7 @@ impl<'a> Inspect<'a> for amethyst::ui::UiText {
 				lazy.insert(entity, new_me);
 			}
 
-			ui.pop_id();
+			id.pop(ui);
 		});
 	}
 

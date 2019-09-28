@@ -14,7 +14,7 @@ impl<'a> Inspect<'a> for Named {
 		amethyst_imgui::with(|ui| {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut buf = imgui::ImString::new(me.name.clone());
-			ui.push_id(im_str!("named"));
+			let id = ui.push_id(im_str!("named"));
 			ui.input_text(&im_str!("Entity {}/{}", entity.id(), entity.gen().id()), &mut buf)
 				.resize_buffer(true)
 				.build();
@@ -23,7 +23,7 @@ impl<'a> Inspect<'a> for Named {
 			if me.name != new_name {
 				lazy.insert(entity, Named::new(new_name));
 			}
-			ui.pop_id();
+			id.pop(ui);
 		});
 	}
 

@@ -17,7 +17,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 		amethyst_imgui::with(|ui| {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
 			let mut new_me = me.clone();
-			ui.push_id(im_str!("texture"));
+			let id = ui.push_id(im_str!("texture"));
 
 			if !texture_list.is_empty() {
 				let mut current = 0;
@@ -37,7 +37,7 @@ impl<'a> Inspect<'a> for amethyst::renderer::TextureHandle {
 			if *me != new_me {
 				lazy.insert(entity, new_me);
 			}
-			ui.pop_id();
+			id.pop(ui);
 		});
 	}
 

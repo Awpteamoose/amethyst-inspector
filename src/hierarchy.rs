@@ -29,7 +29,7 @@ impl InspectorHierarchy {
 
 		macro_rules! tree_node_buttons {
 			() => {
-				if ui.is_item_hovered_with_flags(imgui::ImGuiHoveredFlags::AllowWhenBlockedByActiveItem) {
+				if ui.is_item_hovered_with_flags(imgui::ItemHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM) {
 					self.hovering = Some(entity);
 
 					if ui.is_mouse_clicked(imgui::MouseButton::Left) && self.dragging.is_none() {
@@ -78,9 +78,9 @@ impl<'s> System<'s> for InspectorHierarchy {
 
 	fn run(&mut self, (mut inspector_state, names, parents, hierarchy, entities, lazy): Self::SystemData) {
 		amethyst_imgui::with(move |ui| {
-			ui.window(&im_str!("Hierarchy"))
+			imgui::Window::new(&im_str!("Hierarchy"))
 				.size([300.0, 500.0], imgui::Condition::FirstUseEver)
-				.build(move || {
+				.build(ui, move || {
 					self.hovering = None;
 
 					if ui.small_button(&im_str!("new entity##hierarchy")) {

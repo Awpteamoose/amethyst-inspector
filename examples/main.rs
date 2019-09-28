@@ -128,6 +128,7 @@ fn main() -> amethyst::Result<()> {
 		.with_barrier()
 		.with_bundle(amethyst::core::transform::TransformBundle::new())?
 		.with_bundle(amethyst::ui::UiBundle::<amethyst::input::StringBindings>::new())?
+		.with_bundle(amethyst::input::InputBundle::<amethyst::input::StringBindings>::default())?
 		.with_bundle(
 			RenderingBundle::<DefaultBackend>::new()
 				.with_plugin(
@@ -136,7 +137,7 @@ fn main() -> amethyst::Result<()> {
 				)
 				.with_plugin(amethyst::renderer::plugins::RenderFlat2D::default())
 				.with_plugin(amethyst::ui::RenderUi::default())
-				.with_plugin(amethyst_imgui::RenderImgui::default()),
+				.with_plugin(amethyst_imgui::RenderImgui::<amethyst::input::StringBindings>::default()),
 		)?
 		.with(amethyst_inspector::InspectorHierarchy::default(), "", &[])
 		.with(Inspector, "", &[])

@@ -15,13 +15,14 @@ macro_rules! inspect_enum {
 		let mut items = Vec::<imgui::ImString>::with_capacity(size);
 		for (i, item) in source.iter().enumerate() {
 			if *item == $current {
-				current = i as i32;
+				current = i;
 			}
 			items.push(im_str!("{:?}", item).into());
 		}
 
 		amethyst_imgui::with(|ui| {
-			ui.combo($label, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), size as i32);
+			// TODO: regular combo
+			imgui::ComboBox::new($label).build_simple_string(ui, &mut current, items.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice());
 		});
 
 		source[current as usize].clone()
@@ -190,9 +191,9 @@ macro_rules! inspector {
 						use ::amethyst_imgui::imgui::{self, im_str};
 						use $crate::Inspect;
 
-						ui.window(&im_str!("Inspector"))
+						imgui::Window::new(&im_str!("Inspector"))
 							.size([300.0, 500.0], imgui::Condition::FirstUseEver)
-							.build(move || {
+							.build(ui, move || {
 								$(<$cmp as Inspect>::setup(&mut [<data $cmp>], inspector_state.selected);)+
 								if let Some(entity) = inspector_state.selected {
 									if entities.is_alive(entity) {
@@ -213,8 +214,8 @@ macro_rules! inspector {
 													if ui.small_button(&im_str!("{}", stringify!($cmp))) {
 														<$cmp as Inspect>::add(&mut [<data $cmp>], entity);
 													}
-													hor_pos += ui.get_item_rect_size()[0] + ui.clone_style().item_spacing[0];
-													if hor_pos + ui.get_item_rect_size()[0] < ui.get_content_region_avail()[0] {
+													hor_pos += ui.item_rect_size()[0] + ui.clone_style().item_spacing[0];
+													if hor_pos + ui.item_rect_size()[0] < ui.content_region_avail()[0] {
 														ui.same_line(0.);
 													} else {
 														hor_pos = 0.;
@@ -267,13 +268,12 @@ macro_rules! inspector {
 
 								#[cfg(feature = "saveload")]
 								{
-									let mut current = inspector_state.selected_prefab as i32;
+									let mut current = inspector_state.selected_prefab;
 									let strings = inspector_state.prefabs.iter().map(|x| imgui::ImString::from(&im_str!("{}", x))).collect::<Vec<_>>();
-									ui.combo(
-										&im_str!("##inspector_load_combo"),
+									imgui::ComboBox::new(&im_str!("##inspector_load_combo")).build_simple_string(
+										ui,
 										&mut current,
 										strings.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(),
-										10,
 									);
 									inspector_state.selected_prefab = current as usize;
 									ui.same_line(0.);

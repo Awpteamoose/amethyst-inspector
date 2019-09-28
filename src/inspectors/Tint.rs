@@ -14,7 +14,7 @@ impl<'a> Inspect<'a> for Tint {
 	fn inspect((storage, lazy): &mut Self::SystemData, entity: Entity) {
 		amethyst_imgui::with(|ui| {
 			let me = if let Some(x) = storage.get(entity) { x } else { return; };
-			ui.push_id(im_str!("tint"));
+			let id = ui.push_id(im_str!("tint"));
 
 			let (r, g, b, a) = me.0.into_components();
 			let mut v: Vector4<f32> = Vector4::new(r, g, b, a);
@@ -24,7 +24,7 @@ impl<'a> Inspect<'a> for Tint {
 			if changed {
 				lazy.insert(entity, Tint(Srgba::from_components((v[0], v[1], v[2], v[3]))));
 			}
-			ui.pop_id();
+			id.pop(ui);
 		});
 	}
 
