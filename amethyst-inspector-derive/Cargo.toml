@@ -2,6 +2,9 @@
 name = "amethyst-inspector-derive"
 version = "0.1.0"
 edition = "2018"
+description = "derive macros for amethyst-inspector"
+authors = ["Awpteamoose <cargo@awpteamoose.my.to>"]
+license = "CC0-1.0"
 
 [lib]
 proc-macro = true
