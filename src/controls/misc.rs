@@ -2,10 +2,10 @@ use crate::prelude::*;
 
 impl<'control, 'resource: 'control> InspectControl<'control, 'resource> for &'control mut std::time::Duration {
 	type SystemData = ();
-	type Builder = Builder<'control>;
+	type Builder = DurationControlBuilder<'control>;
 }
 
-pub struct Builder<'control> {
+pub struct DurationControlBuilder<'control> {
 	pub value: &'control mut std::time::Duration,
 	pub label: Option<&'control imgui::ImStr>,
 	pub speed: f32,
@@ -13,7 +13,7 @@ pub struct Builder<'control> {
 	pub changed: Option<&'control mut bool>,
 }
 
-impl<'control, 'resource: 'control> InspectControlBuilder<'control, 'resource, &'control mut std::time::Duration> for Builder<'control> {
+impl<'control, 'resource: 'control> InspectControlBuilder<'control, 'resource, &'control mut std::time::Duration> for DurationControlBuilder<'control> {
 	fn new(value: &'control mut std::time::Duration) -> Self {
 		Self { value, label: None, speed: 1., null_to: <std::time::Duration as Default>::default(), changed: None }
 	}
@@ -39,7 +39,7 @@ impl<'control, 'resource: 'control> InspectControlBuilder<'control, 'resource, &
 	}
 }
 
-impl<'control> Builder<'control> {
+impl<'control> DurationControlBuilder<'control> {
 	pub fn speed(mut self, speed: f32) -> Self {
 		self.speed = speed;
 		self
