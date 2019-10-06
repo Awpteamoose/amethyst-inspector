@@ -32,45 +32,15 @@ impl SimpleState for Example {
 			Read<'_, TextureList>,
 		)>();
 
-		{
-			let loader = world.read_resource::<amethyst::assets::Loader>();
-			// TODO: man it became hard to load texture from raw pixel data
-			let white = loader.load(
-				"white.jpg",
-				amethyst::renderer::ImageFormat::default(),
-				(),
-				&world.read_resource(),
-			);
-
-			let mut textures = world.write_resource::<TextureList>();
-			textures.insert("white 1px".to_owned(), white.clone());
-
-			let mut sprites = world.write_resource::<SpriteList>();
-			sprites.insert(
-				"white 1px".to_owned(),
-				world.read_resource::<amethyst::assets::Loader>().load_from_data(
-					amethyst::renderer::SpriteSheet { texture: white.clone(), sprites: vec![amethyst::renderer::sprite::Sprite::from_pixel_values(1, 1, 1, 1, 0, 0, [0., 0.], false, false)] },
-					(),
-					&world.read_resource::<amethyst::assets::AssetStorage<amethyst::renderer::SpriteSheet>>(),
-				),
-			);
-		}
-
-		let white = world.read_resource::<TextureList>()["white 1px"].clone();
 		world
 			.create_entity()
-			.named("testttt")
 			.with(amethyst::ui::UiTransform::new(
 				String::default(),
 				amethyst::ui::Anchor::Middle,
 				amethyst::ui::Anchor::Middle,
-				0.,
-				0.,
-				0.,
-				200.,
-				50.,
+				0., 0., 0.,
+				200., 50.,
 			))
-			// .with(amethyst::ui::UiImage::Texture(white))
 			.with(amethyst::ui::UiImage::SolidColor([1., 1., 1., 1.]))
 			.build();
 	}
