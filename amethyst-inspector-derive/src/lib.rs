@@ -103,7 +103,6 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 							return quote!((
 								::amethyst::ecs::Entities<'a>,
 								ReadStorage<'a, ::amethyst::core::Named>,
-								ReadStorage<'a, ::amethyst::ecs::saveload::U64Marker>,
 								#(ReadStorage<'a, #paths>,)*
 							),);
 						}
@@ -153,18 +152,19 @@ fn inspect(data: &Data, name: &Ident) -> (TokenStream, TokenStream) {
 
 // TODO: maybe this can be a control-like trait instead of hamfisted any downcasting?
 fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::Path]) -> TokenStream {
-	let members: Vec<syn::Index> = components.iter().enumerate().map(|(i, _)| syn::Index::from(i + 3)).collect::<Vec<_>>();
+	let members: Vec<syn::Index> = components.iter().enumerate().map(|(i, _)| syn::Index::from(i + 2)).collect::<Vec<_>>();
 	quote! {
 		let mut #name = me.#name.clone();
 		{
-			use ::amethyst::ecs::{Entity, saveload::{U64Marker as Marker, U64MarkerAllocator as MarkerAllocator}};
+			use ::amethyst::ecs::Entity;
 			use ::amethyst_imgui::imgui;
 			use ::std::any::Any;
 
 			let data = #data;
 			let entities = &data.0;
 			let named_s = &data.1;
-			// TODO: less disgusting, saveload feature
+
+			// TODO: less disgusting
 			if let Some(field) = Any::downcast_mut::<Option<Entity>>(&mut #name) {
 				let mut current = 0;
 				let list = ::std::iter::once(None).chain((entities, #(&data.#members,)*).join().map(|(entity, ..)| Some(entity))).collect::<Vec<_>>();
@@ -197,52 +197,10 @@ fn with_component_body(name: &syn::Ident, data: syn::Ident, components: &[syn::P
 						} else {
 							format!("Entity {}/{}", entity.id(), entity.gen().id())
 						};
-						items.push(&imgui::im_str!("{}", label).into());
+						items.push(imgui::im_str!("{}", label).into());
 				}
 				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
 				*field = list[current as usize];
-			} else if let Some(field) = Any::downcast_mut::<Option<Marker>>(&mut #name) {
-				let marker_s = &data.2;
-
-				let mut current = 0;
-				let list = ::std::iter::once(None).chain((entities, marker_s, #(&data.#members,)*).join().map(|(entity, marker, ..)| Some((entity, marker)))).collect::<Vec<_>>();
-				let mut items = Vec::<imgui::ImString>::new();
-				for (i, &item) in list.iter().enumerate() {
-						if let Some((entity, marker)) = item {
-							if *field == Some(*marker) { current = i as i32; }
-						}
-
-						let label: String = if let Some((entity, marker)) = item {
-							if let Some(name) = named_s.get(entity) {
-								name.name.to_string()
-							} else {
-								format!("Entity {}/{}", entity.id(), entity.gen().id())
-							}
-						} else {
-							"None".into()
-						};
-						items.push(imgui::im_str!("{}", label).into());
-				}
-				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-				*field = if let Some((entity, marker)) = list[current as usize] { Some(*marker) } else { None };
-			} else if let Some(field) = Any::downcast_mut::<Marker>(&mut #name) {
-				let marker_s = &data.2;
-
-				let mut current = 0;
-				let list = (entities, marker_s, #(&data.#members,)*).join().map(|(entity, marker, ..)| (entity, marker)).collect::<Vec<_>>();
-				let mut items = Vec::<imgui::ImString>::new();
-				for (i, &(entity, marker)) in list.iter().enumerate() {
-						if *field == *marker { current = i as i32; }
-
-						let label: String = if let Some(name) = named_s.get(entity) {
-							name.name.to_string()
-						} else {
-							format!("Entity {}/{}", entity.id(), entity.gen().id())
-						};
-						items.push(imgui::im_str!("{}", label).into());
-				}
-				changed = ui.combo(&imgui::im_str!("{}", stringify!(#name)), &mut current, items.iter().map(::std::ops::Deref::deref).collect::<Vec<_>>().as_slice(), 10) || changed;
-				*field = *list[current as usize].1;
 			}
 		}
 	}

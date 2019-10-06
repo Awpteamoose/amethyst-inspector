@@ -62,20 +62,7 @@ pub trait InspectControl<'control, 'resource: 'control>: Sized {
 /// This holds internal state of inspector
 #[derive(Default)]
 pub struct InspectorState {
-	pub prefab_folder: String,
-	/// a list of options for the loading dropdown
-	pub prefabs: Vec<String>,
-	/// if `saveload` feature, is enabled clicking "load" will add selected prefab here
-	#[cfg(feature = "saveload")]
-	pub to_load: Vec<String>,
-	/// if `saveload` feature, is enabled clicking "save" will add inspected entity here
-	#[cfg(feature = "saveload")]
-	pub to_save: Vec<(Entity, String)>,
 	pub selected: Option<Entity>,
-	#[doc(hidden)]
-	pub save_name: String,
-	#[doc(hidden)]
-	pub selected_prefab: usize,
 }
 
 /// Any component implementing Inspect and included in your `inspect!` will show up in the inspector
@@ -158,15 +145,6 @@ macro_rules! inspector {
 		#[allow(missing_copy_implementations)]
 		pub struct Inspector;
 
-		impl Inspector {
-			fn set_prefab_folder(world: &mut ::amethyst::ecs::World, path: String) {
-				let mut state = world.fetch_mut::<$crate::InspectorState>();
-				// TODO: glob
-				state.prefabs = ::std::fs::read_dir(&path).unwrap().map(|x| x.unwrap().file_name().into_string().unwrap()).collect();
-				state.prefab_folder = path;
-			}
-		}
-
 		impl<'s> System<'s> for Inspector {
 			type SystemData = (
 				Write<'s, $crate::InspectorState>,
@@ -235,42 +213,6 @@ macro_rules! inspector {
 												}
 											}
 										)+
-
-										#[cfg(feature = "saveload")]
-										{
-											ui.separator();
-
-											{
-												let mut buf = imgui::ImString::new(inspector_state.save_name.clone());
-												ui.input_text(&im_str!("##inspector_save_input"), &mut buf)
-													.resize_buffer(true)
-													.build();
-												inspector_state.save_name = buf.to_str().to_owned();
-											}
-
-											ui.same_line(0.);
-											if ui.small_button(&im_str!("save##inspector_save_button")) {
-												let name = inspector_state.save_name.clone();
-												inspector_state.to_save.push((entity, name));
-											}
-										}
-									}
-								}
-
-								#[cfg(feature = "saveload")]
-								{
-									let mut current = inspector_state.selected_prefab;
-									let strings = inspector_state.prefabs.iter().map(|x| imgui::ImString::from(&im_str!("{}", x))).collect::<Vec<_>>();
-									imgui::ComboBox::new(&im_str!("##inspector_load_combo")).build_simple_string(
-										ui,
-										&mut current,
-										strings.iter().map(std::ops::Deref::deref).collect::<Vec<_>>().as_slice(),
-									);
-									inspector_state.selected_prefab = current as usize;
-									ui.same_line(0.);
-									if ui.small_button(&im_str!("load##inspector_load_button")) {
-										let x = inspector_state.prefabs[inspector_state.selected_prefab].clone();
-										inspector_state.to_load.push(x);
 									}
 								}
 							});

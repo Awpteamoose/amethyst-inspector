@@ -7,5 +7,3 @@ pub mod Transform;
 pub mod UiText;
 pub mod UiTransform;
 // pub mod UiTransformDebug;
-#[cfg(feature = "saveload")]
-pub mod SimpleMarker;

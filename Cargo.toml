@@ -10,10 +10,5 @@ license = "CC0-1.0"
 amethyst = "0.13"
 amethyst-imgui = "0.5"
 amethyst-inspector-derive = "0.1"
-matches = "0.1"
 paste = "0.1"
-specs-derive = "0.4"
 
-[features]
-default = ["amethyst/vulkan"]
-saveload = ["amethyst/saveload"]

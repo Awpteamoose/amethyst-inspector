@@ -12,11 +12,9 @@ use amethyst::{
 		},
 		Transform,
 		Named,
-		ecs::saveload::SimpleMarker as SimpleMarkerRaw,
 	},
 	ui::{UiTransform, UiText},
 };
-type SimpleMarker = SimpleMarkerRaw<()>;
 
 use amethyst_inspector::{inspector, InspectControl, Inspect};
 
@@ -32,7 +30,6 @@ impl SimpleState for Example {
 			Read<'_, SpriteList>,
 			Read<'_, std::collections::HashMap<String, amethyst::ui::FontHandle>>,
 			Read<'_, TextureList>,
-			Read<'_, amethyst::core::ecs::saveload::SimpleMarkerAllocator<()>>,
 		)>();
 
 		{
@@ -90,6 +87,8 @@ pub struct Movement {
 pub struct Player {
 	pub movement: Movement,
 	pub direction: Vector2<f32>,
+	#[inspect(with_component = "Player")]
+	pub maybe_player: Option<Entity>,
 }
 
 impl Default for Player {
@@ -100,6 +99,7 @@ impl Default for Player {
 				speed: 10.,
 				direction: Vector2::zeros(),
 			},
+			maybe_player: None,
 		}
 	}
 }
@@ -109,7 +109,6 @@ impl Component for Player {
 }
 
 inspector![
-	SimpleMarker,
 	Named,
 	Transform,
 	Player,
