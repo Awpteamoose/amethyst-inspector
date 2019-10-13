@@ -94,6 +94,7 @@ macro_rules! inspect_default {
 	};
 }
 
+#[macro_export]
 macro_rules! inspect_marker {
 	($cmp: path) => {
 		impl<'a> $crate::Inspect<'a> for $cmp {
@@ -132,6 +133,52 @@ inspect_marker!(amethyst::renderer::Transparent);
 //     fn can_add(_: &mut Self::SystemData, _: ::amethyst::ecs::Entity) -> bool { true }
 //     fn add((lazy, ..): &mut Self::SystemData, entity: Entity) { lazy.insert(entity, amethyst::renderer::Flipped::None) }
 // }
+
+#[doc(hidden)]
+pub fn draw_add_component<'a, Component: Inspect<'a>>(
+	ui: &imgui::Ui,
+	name: &str,
+	cmp_data: &mut Component::SystemData,
+	store: &ReadStorage<'_, Component>,
+	entity: Entity,
+	hor_pos: &mut f32,
+) {
+	if Component::can_add(cmp_data, entity) && !store.contains(entity) {
+		if ui.small_button(&imgui::im_str!("{}", name)) {
+			Component::add(cmp_data, entity);
+		}
+		*hor_pos += ui.item_rect_size()[0] + ui.clone_style().item_spacing[0];
+		if *hor_pos + ui.item_rect_size()[0] < ui.content_region_avail()[0] {
+			ui.same_line(0.);
+		} else {
+			*hor_pos = 0.;
+		}
+	}
+}
+
+#[doc(hidden)]
+pub fn draw_inspect_component<'a, Component: Inspect<'a> + Send + Sync>(
+	ui: &imgui::Ui,
+	name: &str,
+	cmp_data: &mut Component::SystemData,
+	store: &ReadStorage<'_, Component>,
+	entity: Entity,
+	lazy: &Read<'_, LazyUpdate>,
+) {
+	if store.contains(entity) {
+		let mut remove = false;
+		let expanded = ui.collapsing_header(&imgui::im_str!("{}##header{:?}", name, entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
+		if Component::can_remove(cmp_data, entity) {
+			ui.same_line(0.);
+			remove = ui.small_button(&imgui::im_str!("remove##{}_header_remove", name));
+		}
+		if remove {
+			lazy.remove::<Component>(entity);
+		} else if expanded {
+			Component::inspect(cmp_data, entity);
+		}
+	}
+}
 
 #[macro_export]
 macro_rules! inspector {
@@ -178,19 +225,7 @@ macro_rules! inspector {
 
 										if ui.collapsing_header(&im_str!("add component")).build() {
 											let mut hor_pos = 0.;
-											$(
-												if <$cmp as Inspect>::can_add(&mut [<data $cmp>], entity) && ![<store $cmp>].contains(entity) {
-													if ui.small_button(&im_str!("{}", stringify!($cmp))) {
-														<$cmp as Inspect>::add(&mut [<data $cmp>], entity);
-													}
-													hor_pos += ui.item_rect_size()[0] + ui.clone_style().item_spacing[0];
-													if hor_pos + ui.item_rect_size()[0] < ui.content_region_avail()[0] {
-														ui.same_line(0.);
-													} else {
-														hor_pos = 0.;
-													}
-												}
-											)+
+											$($crate::draw_add_component(ui, stringify!($cmp), &mut [<data $cmp>], &[<store $cmp>], entity, &mut hor_pos);)+
 											if hor_pos > 0. {
 												ui.new_line();
 											}
@@ -198,21 +233,7 @@ macro_rules! inspector {
 											ui.separator();
 										}
 
-										$(
-											if [<store $cmp>].contains(entity) {
-												let mut remove = false;
-												let expanded = ui.collapsing_header(&im_str!("{}##header{:?}", stringify!($cmp), entity)).flags(imgui::ImGuiTreeNodeFlags::AllowItemOverlap).default_open(true).build();
-												if <$cmp as Inspect>::can_remove(&mut [<data $cmp>], entity) {
-													ui.same_line(0.);
-													remove = ui.small_button(&im_str!("remove##{}_header_remove", stringify!($cmp)));
-												}
-												if remove {
-													lazy.remove::<$cmp>(entity);
-												} else if expanded {
-													<$cmp as Inspect>::inspect(&mut [<data $cmp>], entity);
-												}
-											}
-										)+
+										$($crate::draw_inspect_component(ui, stringify!($cmp), &mut [<data $cmp>], &[<store $cmp>], entity, &lazy);)+
 									}
 								}
 							});
